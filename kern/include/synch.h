@@ -63,6 +63,7 @@ void P(struct semaphore *);
 void V(struct semaphore *);
 
 
+
 /*
  * Simple lock for mutual exclusion.
  *
@@ -71,11 +72,19 @@ void V(struct semaphore *);
  *
  * The name field is for easier debugging. A copy of the name is
  * (should be) made internally.
+ * lk_state - true -> another thread holds the lock
+ * lk_owner - thread t_name - name of thread holding the lock
  */
 struct lock {
         char *lk_name;
         // add what you need here
         // (don't forget to mark things volatile as needed)
+        struct wchan *lk_wchan;
+        struct spinlock lk_lock;
+        /*bool lk_state;    //true - lock is hold by another thread else lock is free
+        char *lk_owner;*/
+        struct thread *lk_owner;
+
 };
 
 struct lock *lock_create(const char *name);
@@ -115,6 +124,8 @@ struct cv {
         char *cv_name;
         // add what you need here
         // (don't forget to mark things volatile as needed)
+        struct wchan *cv_wchan;
+
 };
 
 struct cv *cv_create(const char *name);
