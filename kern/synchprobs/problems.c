@@ -1,4 +1,11 @@
 /*
+car drive problem solution implemented successfully.
+To get the last final solution change the function lock_release_if_required to lock_release()
+
+Final soltuion to whale problem.
+*/
+
+/*
  * Copyright (c) 2001, 2002, 2009
  *	The President and Fellows of Harvard College.
  *
@@ -47,7 +54,50 @@
 // functions will allow you to do local initialization. They are called at
 // the top of the corresponding driver code.
 
-void whalemating_init() {
+/*struct semaphore * maleSemaphore;
+struct semaphore * femaleSemaphore;
+struct semaphore * matchmakerSemaphore;*/
+
+int numberOfMales;
+int numberOfFemales;
+int numberOfMatchmakers_male;
+int numberOfMatchmakers_female;
+
+int tempMalecount;
+int tempfemalecount;
+int tempmmcount;
+
+struct cv * cv_male;
+struct cv * cv_female;
+struct cv * cv_matchmaker;
+
+struct lock * lock_male;
+struct lock * lock_female;
+struct lock * lock_matchmaker;
+
+void whalemating_init()
+{
+	/*maleSemaphore = sem_create("maleSemaphore", 0);
+	femaleSemaphore = sem_create("femaleSemaphore", 0);
+	matchmakerSemaphore = sem_create("matchmakerSemaphore", 0);*/
+
+	numberOfMales = 0;
+	numberOfFemales = 0;
+	numberOfMatchmakers_male = 0;
+	numberOfMatchmakers_female = 0;
+
+	cv_male = cv_create("cv_male");
+	cv_female = cv_create("cv_female");
+	cv_matchmaker = cv_create("cv_matchmaker");
+
+	lock_male = lock_create("lock_male");
+	lock_female = lock_create("lock_female");
+	lock_matchmaker = lock_create("lock_matchmaker");
+
+	 tempMalecount = 0;
+	 tempfemalecount = 0;
+	 tempmmcount =0;
+
   return;
 }
 
@@ -55,6 +105,10 @@ void whalemating_init() {
 // care if your problems leak memory, but if you do, use this to clean up.
 
 void whalemating_cleanup() {
+	/*sem_destroy(maleSemaphore);
+	sem_destroy(femaleSemaphore);
+	sem_destroy(matchmakerSemaphore);*/
+
   return;
 }
 
@@ -66,6 +120,33 @@ male(void *p, unsigned long which)
   
   male_start();
 	// Implement this function 
+  /*V(maleSemaphore);
+  P(femaleSemaphore);
+  P(matchmakerSemaphore);*/
+
+
+  lock_acquire(lock_male);
+  tempMalecount++;
+  numberOfMales = numberOfMales+1;
+  cv_broadcast(cv_male, lock_male);
+  lock_release(lock_male);
+
+  /*lock_acquire(lock_female);
+  while(numberOfFemales == 0)
+  {
+	  cv_wait(cv_female, lock_female);
+  }
+  numberOfFemales = numberOfFemales-1;
+  lock_release(lock_female);*/
+
+  lock_acquire(lock_matchmaker);
+  while(numberOfMatchmakers_male == 0)
+  {
+	  cv_wait(cv_matchmaker, lock_matchmaker);
+  }
+  numberOfMatchmakers_male = numberOfMatchmakers_male-1;
+  lock_release(lock_matchmaker);
+
   male_end();
 
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
@@ -74,6 +155,29 @@ male(void *p, unsigned long which)
   return;
 }
 
+void testing(void *p, unsigned long which)
+{
+	struct semaphore * whalematingMenuSemaphore = (struct semaphore *)p;
+	(void)which;
+
+	while(true)
+	{
+		if(tempMalecount==10 && tempmmcount==10)
+		{
+			int k=0;
+				for(k=0; k<10; k++)
+				{
+					int err = err = thread_fork("Female Whale Thread", female, whalematingMenuSemaphore, k, NULL);
+					if (err) {
+						panic("whalemating: thread_fork failed: (%s)\n", strerror(err));
+					}
+				}
+				break;
+		}
+	}
+}
+
+
 void
 female(void *p, unsigned long which)
 {
@@ -81,7 +185,35 @@ female(void *p, unsigned long which)
   (void)which;
   
   female_start();
-	// Implement this function 
+
+	// Implement this function
+
+    /*P(maleSemaphore);
+    V(femaleSemaphore);
+    P(matchmakerSemaphore);*/
+  lock_acquire(lock_female);
+  tempfemalecount++;
+    numberOfFemales = numberOfFemales+1;
+    cv_broadcast(cv_female, lock_female);
+    lock_release(lock_female);
+
+    lock_acquire(lock_matchmaker);
+        while(numberOfMatchmakers_female == 0)
+        {
+      	  cv_wait(cv_matchmaker, lock_matchmaker);
+        }
+        numberOfMatchmakers_female = numberOfMatchmakers_female-1;
+        lock_release(lock_matchmaker);
+
+    /*lock_acquire(lock_male);
+    while(numberOfMales == 0)
+    {
+  	  cv_wait(cv_male, lock_male);
+    }
+    numberOfMales = numberOfMales-1;
+    lock_release(lock_male);*/
+
+
   female_end();
   
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
@@ -95,9 +227,39 @@ matchmaker(void *p, unsigned long which)
 {
 	struct semaphore * whalematingMenuSemaphore = (struct semaphore *)p;
   (void)which;
-  
+
   matchmaker_start();
-	// Implement this function 
+	// Implement this function
+  /*P(maleSemaphore);
+  P(femaleSemaphore);
+  V(matchmakerSemaphore);*/
+  lock_acquire(lock_matchmaker);
+  tempmmcount++;
+  lock_release(lock_matchmaker);
+
+    lock_acquire(lock_male);
+            while(numberOfMales == 0)
+            {
+          	  cv_wait(cv_male, lock_male);
+            }
+            numberOfMales = numberOfMales-1;
+            lock_release(lock_male);
+
+        lock_acquire(lock_female);
+              while(numberOfFemales == 0)
+              {
+            	  cv_wait(cv_female, lock_female);
+              }
+              numberOfFemales = numberOfFemales-1;
+              lock_release(lock_female);
+
+
+      lock_acquire(lock_matchmaker);
+      numberOfMatchmakers_male = numberOfMatchmakers_male+1;
+      numberOfMatchmakers_female = numberOfMatchmakers_female+1;
+      cv_broadcast(cv_matchmaker, lock_matchmaker);
+      lock_release(lock_matchmaker);
+
   matchmaker_end();
   
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
@@ -137,7 +299,18 @@ matchmaker(void *p, unsigned long which)
 // functions will allow you to do local initialization. They are called at
 // the top of the corresponding driver code.
 
-void stoplight_init() {
+struct lock * lock0;
+struct lock * lock1;
+struct lock * lock2;
+struct lock * lock3;
+
+void stoplight_init()
+{
+	lock0 = lock_create("lock0");
+	lock1 = lock_create("lock1");
+	lock2 = lock_create("lock2");
+	lock3 = lock_create("lock3");
+
   return;
 }
 
@@ -145,15 +318,76 @@ void stoplight_init() {
 // care if your problems leak memory, but if you do, use this to clean up.
 
 void stoplight_cleanup() {
+	lock_destroy(lock0);
+	lock_destroy(lock1);
+	lock_destroy(lock2);
+	lock_destroy(lock3);
   return;
 }
 
 void
-gostraight(void *p, unsigned long direction)
+gostraight(void *p, unsigned long dir)
 {
 	struct semaphore * stoplightMenuSemaphore = (struct semaphore *)p;
-  (void)direction;
+  (void)dir;
+
+  int direction = dir;
+  struct lock * firstLock;
+  struct lock * secondLock;
+  int secondQuadrant;
   
+  switch(direction)
+    {
+    case 0 :
+    	firstLock = lock0;
+    	secondLock = lock3;
+    	secondQuadrant = 3;
+  	  break;
+
+    case 1 :
+    	firstLock = lock1;
+    	secondLock = lock0;
+    	secondQuadrant = 0;
+    	  break;
+
+    case 2 :
+    	firstLock = lock2;
+    	secondLock = lock1;
+    	secondQuadrant = 1;
+    	  break;
+
+    case 3 :
+    	firstLock = lock3;
+    	secondLock = lock2;
+    	secondQuadrant = 2;
+    	  break;
+
+    default:
+  	  panic("Not a valid direction\n");
+  	  break;
+    }
+
+
+  while(true)
+  {
+	  lock_acquire(firstLock);
+
+	  lock_acquire_no_sleep(secondLock);
+
+	  if(lock_do_i_hold(firstLock) && lock_do_i_hold(secondLock))
+		  break;
+	  else
+		  lock_release(firstLock);
+  }
+
+  inQuadrant(direction);
+  inQuadrant(secondQuadrant);
+  leaveIntersection();
+
+  lock_release(firstLock);
+  lock_release(secondLock);
+
+
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
   // stoplight driver can return to the menu cleanly.
   V(stoplightMenuSemaphore);
@@ -161,11 +395,96 @@ gostraight(void *p, unsigned long direction)
 }
 
 void
-turnleft(void *p, unsigned long direction)
+turnleft(void *p, unsigned long dir)
 {
 	struct semaphore * stoplightMenuSemaphore = (struct semaphore *)p;
-  (void)direction;
+  (void)dir;
+
+  int direction = (int)dir;
+  struct lock * firstLock;
+  struct lock * secondLock;
+  struct lock * thirdLock;
+  int secondQuadrant;
+  int thirdQuadrant;
   
+  switch(direction)
+      {
+      case 0 :
+      	firstLock = lock0;
+      	secondLock = lock3;
+      	secondQuadrant = 3;
+
+      	thirdLock = lock2;
+      	thirdQuadrant = 2;
+    	  break;
+
+      case 1 :
+      	firstLock = lock1;
+      	secondLock = lock0;
+      	secondQuadrant = 0;
+
+      	thirdLock = lock3;
+      	thirdQuadrant = 3;
+      	  break;
+
+      case 2 :
+      	firstLock = lock2;
+      	secondLock = lock1;
+      	secondQuadrant = 1;
+
+      	thirdLock = lock0;
+      	thirdQuadrant = 0;
+      	  break;
+
+      case 3 :
+      	firstLock = lock3;
+      	secondLock = lock2;
+      	secondQuadrant = 2;
+
+      	thirdLock = lock1;
+      	thirdQuadrant = 1;
+      	  break;
+
+      default:
+    	  panic("Not a valid direction\n");
+    	  break;
+      }
+
+  	while(true)
+    {
+  		lock_acquire(firstLock);
+  		lock_acquire_no_sleep(secondLock);
+
+
+  	  if(lock_do_i_hold(firstLock) && lock_do_i_hold(secondLock))
+  	  {
+  		lock_acquire_no_sleep(thirdLock);
+  		if(lock_do_i_hold(firstLock) && lock_do_i_hold(secondLock) && lock_do_i_hold(thirdLock))
+  		{
+  			break;
+  		}
+  		else
+  		{
+  			lock_release(firstLock);
+  			lock_release(secondLock);
+  		}
+  	  }
+  	  else
+  	  {
+  		lock_release(firstLock);
+  	  }
+
+    }
+
+    inQuadrant(direction);
+    inQuadrant(secondQuadrant);
+    inQuadrant(thirdQuadrant);
+    leaveIntersection();
+
+    lock_release(firstLock);
+    lock_release(secondLock);
+    lock_release(thirdLock);
+
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
   // stoplight driver can return to the menu cleanly.
   V(stoplightMenuSemaphore);
@@ -173,10 +492,40 @@ turnleft(void *p, unsigned long direction)
 }
 
 void
-turnright(void *p, unsigned long direction)
+turnright(void *p, unsigned long dir)
 {
 	struct semaphore * stoplightMenuSemaphore = (struct semaphore *)p;
-  (void)direction;
+  //(void)direction;
+  int direction = (int)dir;
+  struct lock * lockForRight;
+
+  switch(direction)
+  {
+  case 0 :
+	  lockForRight = lock0;
+	  break;
+
+  case 1 :
+  	  lockForRight = lock1;
+  	  break;
+
+  case 2 :
+  	  lockForRight = lock2;
+  	  break;
+
+  case 3 :
+  	  lockForRight = lock3;
+  	  break;
+
+  default:
+	  panic("Not a valid direction\n");
+	  break;
+  }
+
+  lock_acquire(lockForRight);
+  inQuadrant(direction);
+  leaveIntersection();
+  lock_release(lockForRight);
 
   // 08 Feb 2012 : GWA : Please do not change this code. This is so that your
   // stoplight driver can return to the menu cleanly.
