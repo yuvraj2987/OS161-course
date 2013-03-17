@@ -81,8 +81,6 @@ struct lock {
         // (don't forget to mark things volatile as needed)
         struct wchan *lk_wchan;
         struct spinlock lk_lock;
-        /*bool lk_state;    //true - lock is hold by another thread else lock is free
-        char *lk_owner;*/
         struct thread *lk_owner;
 
 };
@@ -152,8 +150,22 @@ void cv_broadcast(struct cv *cv, struct lock *lock);
  * 13 Feb 2012 : GWA : Reader-writer locks.
  */
 
+/*states read-write lock can be in*/
+typedef enum
+{
+	L_EMPTY,	/*No one holds the lock*/
+	L_READ,		/*Reader thread holds the lock*/
+	L_WRITE,	/*Writer thread holds the lock*/
+}rwlockstate;
+
+
+
 struct rwlock {
         char *rwlock_name;
+        struct wchan *rwlock_wchan;
+        struct spinlock rwlock_lock;
+        rwlockstate rwlock_state;
+        unsigned int no_of_readers;
 };
 
 struct rwlock * rwlock_create(const char *);
