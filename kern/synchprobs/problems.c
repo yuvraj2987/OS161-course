@@ -155,7 +155,7 @@ male(void *p, unsigned long which)
   return;
 }
 
-void testing(void *p, unsigned long which)
+/*void testing(void *p, unsigned long which)
 {
 	struct semaphore * whalematingMenuSemaphore = (struct semaphore *)p;
 	(void)which;
@@ -175,7 +175,7 @@ void testing(void *p, unsigned long which)
 				break;
 		}
 	}
-}
+}*/
 
 
 void
