@@ -90,16 +90,13 @@ whalemating(int nargs, char **args)
 		for (j = 0; j < NMATING; j++) {
 			switch(i) {
 			    case 0:
-				err = thread_fork("Male Whale Thread",
-						  male, whalematingMenuSemaphore, j, NULL);
+				err = thread_fork("Male Whale Thread", male, whalematingMenuSemaphore, j, NULL);
 				break;
 			    case 1:
-				err = thread_fork("Female Whale Thread",
-						  female, whalematingMenuSemaphore, j, NULL);
+				err = thread_fork("Female Whale Thread", female, whalematingMenuSemaphore, j, NULL);
 				break;
 			    case 2:
-				err = thread_fork("Matchmaker Whale Thread",
-						  matchmaker, whalematingMenuSemaphore, j, NULL);
+				err = thread_fork("Matchmaker Whale Thread", matchmaker, whalematingMenuSemaphore, j, NULL);
 				break;
 			}
 			if (err) {
@@ -108,6 +105,12 @@ whalemating(int nargs, char **args)
 			}
 		}
 	}
+
+	/*err = thread_fork("testing", testing, whalematingMenuSemaphore, j, NULL);
+	if (err) {
+		panic("whalemating: thread_fork failed: (%s)\n", strerror(err));
+	}*/
+
 	for (i = 0; i < 3; i++) {
 		for (j = 0; j < NMATING; j++) {
       P(whalematingMenuSemaphore);
@@ -185,6 +188,7 @@ stoplight(int nargs, char **args)
     
     direction = random() % 4;
     turn = random() % 3;
+
       
     snprintf(name, sizeof(name), "Car Thread %d", i);
     
@@ -194,12 +198,12 @@ stoplight(int nargs, char **args)
             direction, NULL);
         break;
       case 1:
-        err = thread_fork(name, turnleft, stoplightMenuSemaphore, direction,
-            NULL);
+    	err = thread_fork(name, turnright, stoplightMenuSemaphore, direction,
+    	              NULL);
         break;
       case 2:
-        err = thread_fork(name, turnright, stoplightMenuSemaphore, direction,
-            NULL);
+    	err = thread_fork(name, turnleft, stoplightMenuSemaphore, direction,
+    	              NULL);
         break;
     }
   }

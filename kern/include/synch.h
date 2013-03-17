@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2001, 2002, 2003, 2004, 2005, 2008, 2009
- *	The President and Fellows of Harvard College.
+ *  The President and Fellows of Harvard College.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,8 +45,8 @@
  */
 struct semaphore {
         char *sem_name;
-	struct wchan *sem_wchan;
-	struct spinlock sem_lock;
+    struct wchan *sem_wchan;
+    struct spinlock sem_lock;
         volatile int sem_count;
 };
 
@@ -88,6 +88,7 @@ struct lock {
 struct lock *lock_create(const char *name);
 void lock_acquire(struct lock *);
 
+
 /*
  * Operations:
  *    lock_acquire - Get the lock. Only one thread can hold the lock at the
@@ -100,7 +101,9 @@ void lock_acquire(struct lock *);
  * These operations must be atomic. You get to write them.
  */
 void lock_release(struct lock *);
+//void lock_release_if_required(struct lock *lock);
 bool lock_do_i_hold(struct lock *);
+void lock_acquire_no_sleep(struct lock *lock);
 void lock_destroy(struct lock *);
 
 

@@ -41,8 +41,8 @@
 #define NSEMLOOPS     63
 #define NLOCKLOOPS    120
 #define NCVLOOPS      5
-//#define NTHREADS      32
-#define NTHREADS      10
+#define NTHREADS      32
+//#define NTHREADS      10
 
 static volatile unsigned long testval1;
 static volatile unsigned long testval2;
