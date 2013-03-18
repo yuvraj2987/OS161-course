@@ -155,27 +155,6 @@ male(void *p, unsigned long which)
   return;
 }
 
-void testing(void *p, unsigned long which)
-{
-	struct semaphore * whalematingMenuSemaphore = (struct semaphore *)p;
-	(void)which;
-
-	while(true)
-	{
-		if(tempMalecount==10 && tempmmcount==10)
-		{
-			int k=0;
-				for(k=0; k<10; k++)
-				{
-					int err = err = thread_fork("Female Whale Thread", female, whalematingMenuSemaphore, k, NULL);
-					if (err) {
-						panic("whalemating: thread_fork failed: (%s)\n", strerror(err));
-					}
-				}
-				break;
-		}
-	}
-}
 
 
 void
