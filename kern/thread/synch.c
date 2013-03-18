@@ -208,17 +208,18 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock)
 {
+		(void)lock;
 
         KASSERT(lock != NULL);
         /*thread in interrupt handler should not
          * acquire the lock
          * */
-        KASSERT(curthread->t_in_interrupt == false);
-        spinlock_acquire(&lock->lk_lock);
-        while(lock->lk_owner != NULL)
+       KASSERT(curthread->t_in_interrupt == false);
+       spinlock_acquire(&lock->lk_lock);
+       while(lock->lk_owner != NULL)
         {
-            //Other thread holds the lock
-            /*
+
+            /* Other thread holds the lock
              * 1. lock the wait channel
              * 2. release primitive spin lock
              * 3. Sleep on wait channel
@@ -233,13 +234,16 @@ lock_acquire(struct lock *lock)
         spinlock_release(&lock->lk_lock);
 }
 
+
+
 void
 lock_release(struct lock *lock)
 {
+
     KASSERT(lock != NULL);
     spinlock_acquire(&lock->lk_lock);
 
-    /*check if current thread is lock owner*/
+  /*check if current thread is lock owner*/
     if(curthread == lock->lk_owner)
     {
         lock->lk_owner = NULL;
@@ -247,32 +251,10 @@ lock_release(struct lock *lock)
     }
     spinlock_release(&lock->lk_lock);
 
-        /*check if current thread is lock owner*/
-        if(curthread == lock->lk_owner)
-    	{
-            lock->lk_owner = NULL;
-            wchan_wakeone(lock->lk_wchan);
-    	}
-        spinlock_release(&lock->lk_lock);
 }
 
 
-/*
-void
-lock_release_if_required(struct lock *lock)
-{
-    KASSERT(lock != NULL);
-	spinlock_acquire(&lock->lk_lock);
-	if( (!wchan_isempty(lock->lk_wchan)) && curthread == lock->lk_owner)
-	{
-		lock->lk_owner = NULL;
-		wchan_wakeone(lock->lk_wchan);
-	}
-	spinlock_release(&lock->lk_lock);
 
-
-}
-*/
 
 bool
 lock_do_i_hold(struct lock *lock)
