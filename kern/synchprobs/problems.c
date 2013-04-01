@@ -156,7 +156,6 @@ male(void *p, unsigned long which)
 }
 
 
-
 void
 female(void *p, unsigned long which)
 {

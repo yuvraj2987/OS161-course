@@ -58,7 +58,6 @@ void female(void *, unsigned long);
 void matchmaker(void *, unsigned long);
 void whalemating_init(void);
 void whalemating_cleanup(void);
-
  
 /*
  * Traffic light.

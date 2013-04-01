@@ -12,9 +12,6 @@
 #include <current.h>
 #include <synch.h>
 
-#define PROBLEMS_MAX_YIELDER 16
-#define PROBLEMS_MAX_SPINNER 8192
-
 /*
  * 08 Feb 2012 : GWA : Driver code for the whalemating problem.
  */
@@ -27,31 +24,35 @@
  * arbitrary periods of time or yield.
  */
 
-inline void male_start(void) {
-	random_yielder(PROBLEMS_MAX_YIELDER);
-	kprintf("%s starting\n", curthread->t_name);
+void
+male_start(void)
+{
+	kprintf("male %s starting\n", curthread->t_name);
 }
-
-inline void male_end(void) {
-	kprintf("%s ending\n", curthread->t_name);
+void
+male_end(void)
+{
+	kprintf("male %s ending\n", curthread->t_name);
 }
-
-inline void female_start(void) {
-	random_spinner(PROBLEMS_MAX_SPINNER);
-	kprintf("%s starting\n", curthread->t_name);
+void
+female_start(void)
+{
+	kprintf("female %s starting\n", curthread->t_name);
 }
-
-inline void female_end(void) {
-	kprintf("%s ending\n", curthread->t_name);
+void
+female_end(void)
+{
+	kprintf("female %s ending\n", curthread->t_name);
 }
-
-inline void matchmaker_start(void) {
-	random_yielder(PROBLEMS_MAX_YIELDER);
-	kprintf("%s starting\n", curthread->t_name);
+void
+matchmaker_start(void)
+{
+	kprintf("matchmaker %s starting\n", curthread->t_name);
 }
-
-inline void matchmaker_end(void) {
-	kprintf("%s ending\n", curthread->t_name);
+void
+matchmaker_end(void)
+{
+	kprintf("matchmaker %s ending\n", curthread->t_name);
 }
 
 /*
@@ -64,54 +65,59 @@ inline void matchmaker_end(void) {
 
 struct semaphore * whalematingMenuSemaphore;
 
-int whalemating(int nargs, char **args) {
-	(void) nargs;
-	(void) args;
+int
+whalemating(int nargs, char **args)
+{
 
-	int i, j, err = 0;
-	char name[32];
+	int i, j, err=0;
 
-	whalematingMenuSemaphore = sem_create("Whalemating Driver Semaphore",
-			0);
-	if (whalematingMenuSemaphore == NULL ) {
-		panic("whalemating: sem_create failed.\n");
-	}
+	(void)nargs;
+	(void)args;
 
-	whalemating_init();
+  whalematingMenuSemaphore = sem_create("Whalemating Driver Semaphore", 0);
+  if (whalematingMenuSemaphore == NULL) {
+
+    // 08 Feb 2012 : GWA : Probably out of memory, or you broke our
+    // semaphores! Panicing might be an overreaction, but why not?
+
+    panic("whalemating: sem_create failed.\n");
+  }
+
+  // 13 Feb 2012 : GWA : Students are smarter than me.
+  whalemating_init();
 
 	for (i = 0; i < 3; i++) {
 		for (j = 0; j < NMATING; j++) {
-			random_yielder(PROBLEMS_MAX_YIELDER);
-
-			switch (i) {
-			case 0:
-				snprintf(name, sizeof(name), "Male Whale Thread %d", (i * 3) + j);
-				err = thread_fork(name, male, whalematingMenuSemaphore, j, NULL);
+			switch(i) {
+			    case 0:
+				err = thread_fork("Male Whale Thread",
+						  male, whalematingMenuSemaphore, j, NULL);
 				break;
-			case 1:
-				snprintf(name, sizeof(name), "Female Whale Thread %d", (i * 3) + j);
-				err = thread_fork(name, female, whalematingMenuSemaphore, j, NULL);
+			    case 1:
+				err = thread_fork("Female Whale Thread",
+						  female, whalematingMenuSemaphore, j, NULL);
 				break;
-			case 2:
-				snprintf(name, sizeof(name), "Matchmaker Whale Thread %d", (i * 3) + j);
-				err = thread_fork(name, matchmaker, whalematingMenuSemaphore, j, NULL);
+			    case 2:
+				err = thread_fork("Matchmaker Whale Thread",
+						  matchmaker, whalematingMenuSemaphore, j, NULL);
 				break;
 			}
 			if (err) {
 				panic("whalemating: thread_fork failed: (%s)\n",
-						strerror(err));
+				      strerror(err));
 			}
 		}
 	}
-
 	for (i = 0; i < 3; i++) {
 		for (j = 0; j < NMATING; j++) {
-			P(whalematingMenuSemaphore);
-		}
-	}
+      P(whalematingMenuSemaphore);
+    }
+  }
+  sem_destroy(whalematingMenuSemaphore);
 
-	sem_destroy(whalematingMenuSemaphore);
-	whalemating_cleanup();
+  // 13 Feb 2012 : GWA : Students are WAY smarter than me, including Nikhil
+  // Londhe.
+  whalemating_cleanup();
 
 	return 0;
 }
@@ -138,19 +144,22 @@ int whalemating(int nargs, char **args) {
  * arbitrary periods of time or yield.
  */
 
-inline void inQuadrant(int quadrant) {
-	random_spinner(PROBLEMS_MAX_SPINNER);
-	kprintf("%s in quadrant %d\n", curthread->t_name, quadrant);
+void
+inQuadrant(int quadrant)
+{
+	kprintf("car %s in quadrant %d\n", curthread->t_name, quadrant);
+  return;
 }
 
-inline void leaveIntersection() {
-	kprintf("%s left the intersection\n", curthread->t_name);
+void leaveIntersection()
+{
+	kprintf("car %s left the intersection\n", curthread->t_name);
+  return;
 }
 
-#define NCARS 99
+#define NCARS 10
 
 struct semaphore * stoplightMenuSemaphore;
-
 
 int
 stoplight(int nargs, char **args)
@@ -176,7 +185,6 @@ stoplight(int nargs, char **args)
     
     direction = random() % 4;
     turn = random() % 3;
-
       
     snprintf(name, sizeof(name), "Car Thread %d", i);
     
@@ -186,12 +194,12 @@ stoplight(int nargs, char **args)
             direction, NULL);
         break;
       case 1:
-    	err = thread_fork(name, turnright, stoplightMenuSemaphore, direction,
-    	              NULL);
+        err = thread_fork(name, turnleft, stoplightMenuSemaphore, direction,
+            NULL);
         break;
       case 2:
-    	err = thread_fork(name, turnleft, stoplightMenuSemaphore, direction,
-    	              NULL);
+        err = thread_fork(name, turnright, stoplightMenuSemaphore, direction,
+            NULL);
         break;
     }
   }
@@ -208,4 +216,3 @@ stoplight(int nargs, char **args)
 
   return 0;
 }
-
