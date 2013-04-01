@@ -58,7 +58,11 @@ void female(void *, unsigned long);
 void matchmaker(void *, unsigned long);
 void whalemating_init(void);
 void whalemating_cleanup(void);
+<<<<<<< HEAD
 //void testing(void *, unsigned long);
+=======
+
+>>>>>>> 025555b5601e5c370bb8e97b648341bd569b4e04
  
 /*
  * Traffic light.
@@ -91,7 +95,7 @@ int semtest(int, char **);
 int locktest(int, char **);
 int cvtest(int, char **);
 int cvtest2(int, char **);
-
+int rwlocktest(int, char **);
 /* filesystem tests */
 int fstest(int, char **);
 int readstress(int, char **);

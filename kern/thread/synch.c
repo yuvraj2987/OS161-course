@@ -208,18 +208,18 @@ lock_destroy(struct lock *lock)
 void
 lock_acquire(struct lock *lock)
 {
-	// Write this
+		(void)lock;
+
         KASSERT(lock != NULL);
         /*thread in interrupt handler should not
          * acquire the lock
          * */
-        KASSERT(curthread->t_in_interrupt == false);
-        spinlock_acquire(&lock->lk_lock);
-
-        while(lock->lk_owner != NULL)
+       KASSERT(curthread->t_in_interrupt == false);
+       spinlock_acquire(&lock->lk_lock);
+       while(lock->lk_owner != NULL)
         {
-            //Other thread holds the lock
-            /*
+
+            /* Other thread holds the lock
              * 1. lock the wait channel
              * 2. release primitive spin lock
              * 3. Sleep on wait channel
@@ -234,36 +234,27 @@ lock_acquire(struct lock *lock)
         spinlock_release(&lock->lk_lock);
 }
 
+
+
 void
 lock_release(struct lock *lock)
 {
+
     KASSERT(lock != NULL);
     spinlock_acquire(&lock->lk_lock);
-        /*check if current thread is lock owner*/
-        if(curthread == lock->lk_owner)
-    	{
-            lock->lk_owner = NULL;
-            wchan_wakeone(lock->lk_wchan);
-    	}
-        spinlock_release(&lock->lk_lock);
-}
 
-
-/*
-void
-lock_release_if_required(struct lock *lock)
-{
-    KASSERT(lock != NULL);
-	spinlock_acquire(&lock->lk_lock);
-	if( (!wchan_isempty(lock->lk_wchan)) && curthread == lock->lk_owner)
-	{
-		lock->lk_owner = NULL;
-		wchan_wakeone(lock->lk_wchan);
-	}
-	spinlock_release(&lock->lk_lock);
+  /*check if current thread is lock owner*/
+    if(curthread == lock->lk_owner)
+    {
+        lock->lk_owner = NULL;
+        wchan_wakeone(lock->lk_wchan);
+    }
+    spinlock_release(&lock->lk_lock);
 
 }
-*/
+
+
+
 
 bool
 lock_do_i_hold(struct lock *lock)
@@ -277,6 +268,7 @@ lock_do_i_hold(struct lock *lock)
         return ret;
 }
 
+
 void lock_acquire_no_sleep(struct lock *lock)
 {
 	KASSERT(lock != NULL);
@@ -289,6 +281,7 @@ void lock_acquire_no_sleep(struct lock *lock)
 	}
 	spinlock_release(&lock->lk_lock);
 }
+
 ////////////////////////////////////////////////////////////
 //
 // CV
@@ -314,9 +307,10 @@ cv_create(const char *name)
         cv->cv_wchan = wchan_create(cv->cv_name);
         if (cv->cv_wchan == NULL)
         {
-            kfree(cv->cv_name);
-            kfree(cv);
-            return NULL;
+
+			kfree(cv->cv_name);
+			kfree(cv);
+			return NULL;
         }
 
         return cv;
@@ -339,10 +333,10 @@ cv_wait(struct cv *cv, struct lock *lock)
         // Write this
         //(void)cv;    // suppress warning until code gets written
         //(void)lock;  // suppress warning until code gets written
-
         KASSERT(cv != NULL);
         KASSERT(lock != NULL);
         KASSERT(lock_do_i_hold(lock));
+
 
         wchan_lock(cv->cv_wchan);
         lock_release(lock);
@@ -353,24 +347,133 @@ cv_wait(struct cv *cv, struct lock *lock)
 void
 cv_signal(struct cv *cv, struct lock *lock)
 {
-     // Write this
-    //(void)cv;    // suppress warning until code gets written
-    //(void)lock;  // suppress warning until code gets written
-     KASSERT(cv != NULL);
-     KASSERT(lock != NULL);
-     KASSERT(lock_do_i_hold(lock));
-     wchan_wakeone(cv->cv_wchan);
+
+	 // Write this
+	//(void)cv;    // suppress warning until code gets written
+	//(void)lock;  // suppress warning until code gets written
+	 KASSERT(cv != NULL);
+	 KASSERT(lock != NULL);
+	 KASSERT(lock_do_i_hold(lock));
+	 wchan_wakeone(cv->cv_wchan);
 
 }
 
 void
 cv_broadcast(struct cv *cv, struct lock *lock)
 {
-     // Write this
-        //(void)cv;    // suppress warning until code gets written
-        //(void)lock;  // suppress warning until code gets written
-         KASSERT(cv != NULL);
-         KASSERT(lock != NULL);
-         KASSERT(lock_do_i_hold(lock));
-         wchan_wakeall(cv->cv_wchan);
+
+	 // Write this
+	    //(void)cv;    // suppress warning until code gets written
+	    //(void)lock;  // suppress warning until code gets written
+	     KASSERT(cv != NULL);
+	     KASSERT(lock != NULL);
+	     KASSERT(lock_do_i_hold(lock));
+	     wchan_wakeall(cv->cv_wchan);
+}
+
+////////////////////////////////////////////////////////////
+//
+// rwlock
+struct rwlock* rwlock_create(const char *name)
+{
+	struct rwlock *rwlock = kmalloc(sizeof(struct rwlock));
+
+	if(rwlock == NULL)
+		return NULL;
+
+	rwlock->rwlock_name = kstrdup(name);
+	if(rwlock->rwlock_name == NULL)
+	{
+		kfree(rwlock);
+		return NULL;
+	}
+
+	rwlock->rwlock_wchan = wchan_create(rwlock->rwlock_name);
+	if(rwlock->rwlock_wchan == NULL)
+	{
+		kfree(rwlock->rwlock_name);
+		kfree(rwlock);
+		return NULL;
+	}
+
+	spinlock_init(&rwlock->rwlock_lock);
+
+	/*At the create no one holds the lock*/
+	rwlock->rwlock_state=L_EMPTY;
+	rwlock->no_of_readers = 0;
+	return rwlock;
+}
+
+void rwlock_destroy(struct rwlock *lock)
+{
+	(void)lock;
+}
+
+void rwlock_acquire_read(struct rwlock *lock)
+{
+	KASSERT(lock != NULL);
+	KASSERT(curthread->t_in_interrupt == false);
+	spinlock_acquire(&lock->rwlock_lock);
+	//wchan_lock(lock->rwlock_wchan);
+	/*when read lock thread should sleep
+	 * 1. lock state is write
+	 * 3. wait channel is not empty - there are threads in queue
+	 * */
+	while((lock->rwlock_state == L_WRITE) || !(wchan_isempty(lock->rwlock_wchan)) )
+	{
+		//Go to waiting queue
+		wchan_lock(lock->rwlock_wchan);
+        spinlock_release(&lock->rwlock_lock);
+        wchan_sleep(lock->rwlock_wchan); //This releases the lock
+        spinlock_acquire(&lock->rwlock_lock);
+        //wchan_lock(lock->rwlock_wchan);
+	}
+	//Release wait channel
+	//wchan_unlock(lock->rwlock_wchan);
+	lock->rwlock_state = L_READ;
+	lock->no_of_readers++;
+	spinlock_release(&lock->rwlock_lock);
+
+}
+
+void rwlock_release_read(struct rwlock *lock)
+{
+	KASSERT(lock != NULL);
+	spinlock_acquire(&lock->rwlock_lock);
+	lock->no_of_readers--;
+	if(lock->no_of_readers == 0)
+	{
+		lock->rwlock_state = L_EMPTY;
+		wchan_wakeone(lock->rwlock_wchan);
+	}
+	spinlock_release(&lock->rwlock_lock);
+}
+
+void rwlock_acquire_write(struct rwlock *lock)
+{
+	KASSERT(lock != NULL);
+	KASSERT(curthread->t_in_interrupt == false);
+	spinlock_acquire(&lock->rwlock_lock);
+	/*when write lock thread should sleep
+	 * 1. Lock state is not empty
+	 * */
+	while(lock->rwlock_state != L_EMPTY )
+	{
+		wchan_lock(lock->rwlock_wchan);
+        spinlock_release(&lock->rwlock_lock);
+        wchan_sleep(lock->rwlock_wchan); //This releases the lock
+        spinlock_acquire(&lock->rwlock_lock);
+	}
+	lock->rwlock_state = L_WRITE;
+	spinlock_release(&lock->rwlock_lock);
+}
+
+void rwlock_release_write(struct rwlock *lock)
+{
+	KASSERT(lock != NULL);
+	spinlock_acquire(&lock->rwlock_lock);
+	lock->rwlock_state = L_EMPTY;
+	wchan_wakeall(lock->rwlock_wchan);
+	//wchan_wakeone(lock->rwlock_wchan);
+	spinlock_release(&lock->rwlock_lock);
 }

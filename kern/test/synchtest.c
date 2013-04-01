@@ -42,6 +42,7 @@
 #define NLOCKLOOPS    120
 #define NCVLOOPS      5
 #define NTHREADS      32
+//#define NTHREADS      10
 
 static volatile unsigned long testval1;
 static volatile unsigned long testval2;
@@ -49,12 +50,14 @@ static volatile unsigned long testval3;
 static struct semaphore *testsem;
 static struct lock *testlock;
 static struct cv *testcv;
+static struct rwlock *testrwlock;
 static struct semaphore *donesem;
 
 static
 void
 inititems(void)
 {
+	testval1=testval2=testval3 = 0;
 	if (testsem==NULL) {
 		testsem = sem_create("testsem", 2);
 		if (testsem == NULL) {
@@ -71,6 +74,14 @@ inititems(void)
 		testcv = cv_create("testlock");
 		if (testcv == NULL) {
 			panic("synchtest: cv_create failed\n");
+		}
+	}
+	if (testrwlock==NULL)
+	{
+		testrwlock = rwlock_create("testrwlock");
+		if (testrwlock == NULL)
+		{
+			panic("rwlocktest: rwlock_create failed\n");
 		}
 	}
 	if (donesem==NULL) {
@@ -219,6 +230,105 @@ locktest(int nargs, char **args)
 
 	return 0;
 }
+
+///////////////////////////////////////////////
+//rw lock test
+static void rwlockwritertest(unsigned int num)
+{
+	rwlock_acquire_write(testrwlock);
+
+	testval1 = num;
+	testval3 = num*num;
+	if(testval3 != testval1*testval1)
+		fail(num, "testval3/(testval1*testval1)");
+	if(testval1 != num)
+		fail(num,"testval1/num");
+	if(testval3 != num*num)
+		fail(num, "testval3/(num*num)");
+	/*if(testval1 != (testval3/testval1))
+		fail(num,"testval1/(testva3/testval1)");*/
+
+	rwlock_release_write(testrwlock);
+}
+
+static
+void
+rwlockreadertest(unsigned int num)
+{
+	//reader
+	rwlock_acquire_read(testrwlock);
+	testval2 = num;
+	if(testval1 == testval2)
+		fail(num, "testval1==testval2");
+	if(testval3 != testval1*testval1)
+		fail(num,"testval3/(testval1*testval1)");
+
+	rwlock_release_read(testrwlock);
+
+}
+
+static
+void
+rwlocktestthread(void *junk, unsigned long num)
+{
+	unsigned int lockstate;
+	(void)junk;
+	int i;
+	lockstate = random()%2;
+	if(lockstate == 0)
+	{
+		for (i=0; i<NLOCKLOOPS; i++)
+		{
+			//rwlock_acquire_read(testrwlock);
+			rwlockreadertest(num);
+			//rwlock_release_read(testrwlock);
+		}
+
+	}
+	else
+	{
+		//writer
+		for (i=0; i<NLOCKLOOPS; i++)
+		{
+			//rwlock_acquire_write(testrwlock);
+			rwlockwritertest(num);
+			//rwlock_release_write(testrwlock);
+		}
+	}
+	V(donesem);
+}
+
+
+int
+rwlocktest(int nargs, char **args)
+{
+	int i, result;
+
+	(void)nargs;
+	(void)args;
+
+	inititems();
+	kprintf("Starting lock test...\n");
+
+	for (i=0; i<NTHREADS; i++) {
+		result = thread_fork("synchtest", rwlocktestthread, NULL, i,
+				     NULL);
+		if (result) {
+			panic("rwlocktest: thread_fork failed: %s\n",
+			      strerror(result));
+		}
+	}
+	for (i=0; i<NTHREADS; i++) {
+		P(donesem);
+	}
+
+	kprintf("Reader Writer Lock test done.\n");
+
+	return 0;
+}
+
+///////////////////////////////////////////////
+//cv test
 
 static
 void

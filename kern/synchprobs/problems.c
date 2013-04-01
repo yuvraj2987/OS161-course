@@ -155,6 +155,7 @@ male(void *p, unsigned long which)
   return;
 }
 
+<<<<<<< HEAD
 /*void testing(void *p, unsigned long which)
 {
 	struct semaphore * whalematingMenuSemaphore = (struct semaphore *)p;
@@ -176,6 +177,8 @@ male(void *p, unsigned long which)
 		}
 	}
 }*/
+=======
+>>>>>>> 025555b5601e5c370bb8e97b648341bd569b4e04
 
 
 void
