@@ -91,7 +91,8 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 {
 
 	int err;
-	//Do I need synchronization
+	//disable interrupts
+
 	struct trapframe *tf_child = (struct trapframe *)
 									kmalloc(sizeof(struct trapframe));
 	struct addrspace *addrs_child = NULL;
@@ -106,7 +107,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 
 	//decide on thread name
 	struct thread *child_thread = NULL;
-	err = thread_fork("Child Thread",
+	err = thread_fork("Child_Thread",
 			child_fork_entry, tf_child, (unsigned long)addrs_child, &child_thread);
 
 	if(err != 0)
@@ -131,21 +132,23 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 
 void child_fork_entry(void *tf, unsigned long addrs_space)
 {
-	struct thread * cur;
-	struct trapframe *tf_child = (struct trapframe *)tf;
+
+	struct trapframe* tf_child = (struct trapframe *)tf;
 	struct addrspace *addrs_child = (struct addrspace *)addrs_space;
+	struct trapframe tf_child_stack;
+	//memcpy(tf_child, tf_parent, sizeof(struct trapframe));
+	memcpy(&tf_child_stack, tf_child, sizeof(struct trapframe));
 	/*(void)tf_child;
 	(void)addrs_child;*/
-	cur = curthread;
 	//Mark success for child
 	tf_child->tf_a3 = 0;
 	tf_child->tf_v0 = 0;
 	//Increment prog counter
 	tf_child-> tf_epc += 4;
 	//load addrs_space into childs curthread ->addrspace
-	cur->t_addrspace = addrs_child;
-	as_activate(cur->t_addrspace);
-	mips_usermode(tf_child);
+	curthread->t_addrspace = addrs_child;
+	as_activate(curthread->t_addrspace);
+	mips_usermode(&tf_child_stack);
 
 }
 

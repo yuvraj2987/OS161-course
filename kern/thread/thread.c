@@ -512,9 +512,7 @@ thread_fork(const char *name,
 		thread_destroy(newthread);
 		return ENOMEM;
 	}
-	//ASST2
-	//Copy parent stack
-	//newthread->t_stack = curthread->t_stack;
+
 
 	thread_checkstack_init(newthread);
 
