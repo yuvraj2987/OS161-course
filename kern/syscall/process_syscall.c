@@ -19,6 +19,7 @@
 #include <current.h>
 #include <syscall.h>
 #include <addrspace.h>
+#include <spl.h>
 
 /*Process table init and release called only once main->boot*/
 void pid_table_init(void)
@@ -92,6 +93,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 
 	int err;
 	//disable interrupts
+	int s = splhigh();
 
 	struct trapframe *tf_child = (struct trapframe *)
 									kmalloc(sizeof(struct trapframe));
@@ -126,20 +128,25 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	}
 
 	*retval = child_thread->t_pid;
+	splx(s);
 	return 0;
 }
 
 
 void child_fork_entry(void *tf, unsigned long addrs_space)
 {
+	/*(void)tf_child;
+		(void)addrs_child;*/
 
 	struct trapframe* tf_child = (struct trapframe *)tf;
 	struct addrspace *addrs_child = (struct addrspace *)addrs_space;
+	/*address space is on kernel heap
+	 * mips_usermode function checks it on kernel stack
+	 * therefore copy from kernel heap to stack
+	 */
 	struct trapframe tf_child_stack;
-	//memcpy(tf_child, tf_parent, sizeof(struct trapframe));
 	memcpy(&tf_child_stack, tf_child, sizeof(struct trapframe));
-	/*(void)tf_child;
-	(void)addrs_child;*/
+
 	//Mark success for child
 	tf_child->tf_a3 = 0;
 	tf_child->tf_v0 = 0;
