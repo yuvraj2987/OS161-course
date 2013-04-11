@@ -48,6 +48,9 @@
 #include <mainbus.h>
 #include <vnode.h>
 
+//custom
+#include <process.h>
+
 #include "opt-synchprobs.h"
 #include "opt-defaultscheduler.h"
 
@@ -153,6 +156,20 @@ thread_create(const char *name)
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
+	/*get pid*/
+	thread->t_pid = 1;
+	/* kernel failed to load if init here
+	thread->t_pid = allocate_pid();
+	pid_table[thread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
+	if(pid_table[thread->t_pid] == NULL)
+	{
+		kfree(thread);
+		return NULL;
+	}
+
+	init_pid_table_entry(thread);
+	*/
+
 
 	return thread;
 }
@@ -495,7 +512,22 @@ thread_fork(const char *name,
 		thread_destroy(newthread);
 		return ENOMEM;
 	}
+	//ASST2
+	//Copy parent stack
+	//newthread->t_stack = curthread->t_stack;
+
 	thread_checkstack_init(newthread);
+
+	/*Allocate entry in pid_table*/
+	newthread->t_pid = allocate_pid();
+	pid_table[newthread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
+	if(pid_table[newthread->t_pid] == NULL)
+	{
+		thread_destroy(newthread);
+		return ENOMEM;
+	}
+
+	init_pid_table_entry(newthread);
 
 	/*
 	 * Now we clone various fields from the parent thread.
@@ -818,7 +850,9 @@ thread_exit(void)
 	thread_checkstack(cur);
 
 	/* Interrupts off on this processor */
-        splhigh();
+    splhigh();
+
+
 	thread_switch(S_ZOMBIE, NULL);
 	panic("The zombie walks!\n");
 }

@@ -58,4 +58,8 @@ void enter_new_process(int argc, userptr_t argv, vaddr_t stackptr,
 int sys_reboot(int code);
 int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 
+//Process system calls
+int sys_fork(struct trapframe *tf, int *ret);
+int sys_waitpid(pid_t pid, int *status_ptr, int options ,int *ret);
+
 #endif /* _SYSCALL_H_ */

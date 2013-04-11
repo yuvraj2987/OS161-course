@@ -396,6 +396,8 @@ mips_usermode(struct trapframe *tf)
 	 */
 	KASSERT(SAME_STACK(cpustacks[curcpu->c_number]-1, (vaddr_t)tf));
 
+
+
 	/*
 	 * This actually does it. See exception.S.
 	 */

@@ -51,6 +51,7 @@
 #include <vfs.h>
 #include <device.h>
 #include <syscall.h>
+#include <process.h>	//ASST2
 #include <test.h>
 #include <version.h>
 #include "autoconf.h"  // for pseudoconfig
@@ -108,8 +109,11 @@ boot(void)
 	kprintf("chiragto@buffalo.edu, amitshri@buffalo.edu system version %s (%s #%d)\n", GROUP_VERSION, buildconfig, buildversion);
 	kprintf("\n");
 
+
 	/* Early initialization. */
 	ram_bootstrap();
+	/*ASST2*/
+	pid_table_init();
 	thread_bootstrap();
 	hardclock_bootstrap();
 	vfs_bootstrap();
@@ -122,6 +126,7 @@ boot(void)
 	/* Now do pseudo-devices. */
 	pseudoconfig();
 	kprintf("\n");
+
 
 	/* Late phase of initialization. */
 	vm_bootstrap();
@@ -149,6 +154,9 @@ shutdown(void)
 
 	kprintf("Shutting down.\n");
 	
+	/*ASST2*/
+	pid_table_release();
+
 	vfs_clearbootfs();
 	vfs_clearcurdir();
 	vfs_unmountall();
