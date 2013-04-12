@@ -847,6 +847,15 @@ thread_exit(void)
 	/* Check the stack guard band. */
 	thread_checkstack(cur);
 
+	/*change thread/process exit_state*/
+	pid_table[cur->t_pid]->exited = 1;	//true
+	//wake the thread waiting to collect this threads pid
+	V(pid_table[cur->t_pid]->exit_sem);
+	/*This should be overwritten in sys_exit with exit code
+	 * passed by user this is just
+	 */
+	pid_table[cur->t_pid]->exit_code =1;
+
 	/* Interrupts off on this processor */
     splhigh();
 

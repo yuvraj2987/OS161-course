@@ -21,6 +21,7 @@
 #include <addrspace.h>
 #include <spl.h>
 #include <copyinout.h>
+#include <kern/wait.h>
 
 /*Process table init and release called only once main->boot*/
 void pid_table_init(void)
@@ -91,7 +92,6 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	int err;
 	//disable interrupts
 	int s = splhigh();
-
 	struct trapframe *tf_child = (struct trapframe *)
 									kmalloc(sizeof(struct trapframe));
 	struct addrspace *addrs_child = NULL;
@@ -190,5 +190,21 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	//cleanup
 	release_pid(pid);
 
+	return 0;
+}
+
+
+int sys_exit(int exit_code)
+{
+	//disable interupts
+	int s = splhigh();
+	//should mark the curthread as zombie
+	thread_exit();
+	//overwrite exit_code
+	pid_table[curthread->t_pid]->exit_code = (_MKWVAL(exit_code) |__WEXITED);
+	//To do- reset parent_pid of child threads
+
+	//enable interrupts
+	splx(s);
 	return 0;
 }
