@@ -160,27 +160,32 @@ void child_fork_entry(void *tf, unsigned long addrs_space)
 }
 
 /*wait pid*/
-int sys_waitpid(pid_t pid, int *status_ptr, int options, int *ret)
+int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 {
 	/*(void)pid;
 	(void)status_ptr;
 	(void)options;
 	(void)ret;*/
-	struct thread * cur = curthread;
+
 	//error checking
 	int *kern_status_ptr;
-	copyin(status_ptr, kern_status_ptr, sizeof(int));
+	int err = copyin(status_ptr, kern_status_ptr, sizeof(int));
+
+	if(err)
+		return err;
 	if(options != 0)
 		return EINVAL;
-	if(status_ptr == NULL)
+	if(kern_status_ptr == NULL)
 		return EFAULT;
 	if(pid_table[pid] == NULL)
 		return ESRCH;
-	if(pid_table[pid]->parent_pid != cur->t_pid)
+	if(pid_table[pid]->parent_pid != curthread->t_pid)
 		return ECHILD;
 	//decrement smeaphore - wait till exist
 	//Set these values in thread_exit
 	P(pid_table[pid]->exit_sem);
+	*kern_status_ptr = pid_table[pid]->exit_code;
+	err = copyout(kern_status_ptr, status_ptr, sizeof(int));
 	*ret = pid;
 	//cleanup
 	release_pid(pid);

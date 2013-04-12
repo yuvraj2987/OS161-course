@@ -60,6 +60,6 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 
 //Process system calls
 int sys_fork(struct trapframe *tf, int *ret);
-int sys_waitpid(pid_t pid, int *status_ptr, int options ,int *ret);
+int sys_waitpid(pid_t pid, userptr_t status_ptr, int options ,int *ret);
 
 #endif /* _SYSCALL_H_ */
