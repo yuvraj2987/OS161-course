@@ -20,6 +20,7 @@
 #include <syscall.h>
 #include <addrspace.h>
 #include <spl.h>
+#include <copyinout.h>
 
 /*Process table init and release called only once main->boot*/
 void pid_table_init(void)
@@ -65,16 +66,12 @@ void init_pid_table_entry(struct thread* new_thread)
 	pid_table[pid]->exit_sem = sem_create(new_thread->t_name, 0);
 }
 
-//when to release- thread_exit
+//when to release? - in sys_waitpid
 void release_pid(pid_t pid)
 {
-	//more stuff
-	//cleaning
-
 	sem_destroy(pid_table[pid]->exit_sem);
 	kfree(pid_table[pid]);
 	lock_acquire(pid_table_lock);
-
 	if(pid>PID_MIN && pid <= PID_MAX)
 	{
 		pid_table[pid] = NULL;
@@ -155,6 +152,9 @@ void child_fork_entry(void *tf, unsigned long addrs_space)
 	//load addrs_space into childs curthread ->addrspace
 	curthread->t_addrspace = addrs_child;
 	as_activate(curthread->t_addrspace);
+	/*free the kernel heap memory??*/
+	/*kfree(tf_child);
+	kfree(addrs_child);*/
 	mips_usermode(&tf_child_stack);
 
 }
@@ -168,7 +168,8 @@ int sys_waitpid(pid_t pid, int *status_ptr, int options, int *ret)
 	(void)ret;*/
 	struct thread * cur = curthread;
 	//error checking
-
+	int *kern_status_ptr;
+	copyin(status_ptr, kern_status_ptr, sizeof(int));
 	if(options != 0)
 		return EINVAL;
 	if(status_ptr == NULL)
@@ -180,7 +181,9 @@ int sys_waitpid(pid_t pid, int *status_ptr, int options, int *ret)
 	//decrement smeaphore - wait till exist
 	//Set these values in thread_exit
 	P(pid_table[pid]->exit_sem);
+	*ret = pid;
+	//cleanup
+	release_pid(pid);
 
-	*ret = pid_table[pid]->exit_code;
 	return 0;
 }
