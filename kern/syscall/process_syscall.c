@@ -208,3 +208,10 @@ int sys_exit(int exit_code)
 	splx(s);
 	return 0;
 }
+
+
+int sys_getpid(int *ret)
+{
+	*ret = curthread->t_pid;
+	return 0;
+}
