@@ -850,7 +850,7 @@ thread_exit(void)
 	/* Check the stack guard band. */
 	thread_checkstack(cur);
 
-	/*change thread/process exit_state*/
+	/*ASST2-change thread/process exit_state*/
 	//Major design change
 	//pid_table[cur->t_pid]->exited = 1;	//true
 	//wake the thread waiting to collect this threads pid
