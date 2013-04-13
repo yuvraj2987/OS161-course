@@ -43,6 +43,9 @@ void pid_table_release(void)
 
 
 /*allocate pid - thread_create*/
+/*Do not check whther pid allocation is successful
+ * i.e PID_MIN<i<=PID_MAX
+ * Its responsibility of calling function*/
 pid_t allocate_pid(void)
 {
 	int i = PID_MIN;//2
@@ -81,17 +84,15 @@ void release_pid(pid_t pid)
 }
 
 /*
-*
+* Fork System call
 */
-
-
 
 int sys_fork(struct trapframe* tf_parent, int *retval)
 {
 
 	int err;
 	//disable interrupts
-	int s = splhigh();
+	//int s = splhigh();
 	struct trapframe *tf_child = (struct trapframe *)
 									kmalloc(sizeof(struct trapframe));
 	struct addrspace *addrs_child = NULL;
@@ -123,9 +124,8 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		kfree(addrs_child);
 		return ENPROC;
 	}
-
 	*retval = child_thread->t_pid;
-	splx(s);
+	//splx(s);
 	return 0;
 }
 

@@ -30,7 +30,7 @@ struct process* pid_table[MAX_RUNNING_PROCS];
 struct lock* pid_table_lock;
 
 /*Allocate pid from global structure*/
-/*Try to get return type pid_t type*/
+
 pid_t allocate_pid(void);
 void release_pid(pid_t pid);
 
