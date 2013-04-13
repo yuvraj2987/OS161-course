@@ -156,8 +156,10 @@ thread_create(const char *name)
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
-	/*get pid*/
-	thread->t_pid = 1;
+
+	//Design change - all this should go in sys_fork
+	//thread->t_pid = 1;
+
 	/* kernel failed to load if init here
 	thread->t_pid = allocate_pid();
 	pid_table[thread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
@@ -517,6 +519,7 @@ thread_fork(const char *name,
 	thread_checkstack_init(newthread);
 
 	/*Allocate entry in pid_table*/
+	/*
 	newthread->t_pid = allocate_pid();
 	pid_table[newthread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
 	if(pid_table[newthread->t_pid] == NULL)
@@ -525,7 +528,7 @@ thread_fork(const char *name,
 		return ENOMEM;
 	}
 
-	init_pid_table_entry(newthread);
+	init_pid_table_entry(newthread);*/
 
 	/*
 	 * Now we clone various fields from the parent thread.
@@ -848,13 +851,14 @@ thread_exit(void)
 	thread_checkstack(cur);
 
 	/*change thread/process exit_state*/
-	pid_table[cur->t_pid]->exited = 1;	//true
+	//Major design change
+	//pid_table[cur->t_pid]->exited = 1;	//true
 	//wake the thread waiting to collect this threads pid
-	V(pid_table[cur->t_pid]->exit_sem);
+	//V(pid_table[cur->t_pid]->exit_sem);
 	/*This should be overwritten in sys_exit with exit code
 	 * passed by user this is just
 	 */
-	pid_table[cur->t_pid]->exit_code =1;
+	//pid_table[cur->t_pid]->exit_code =1;
 
 	/* Interrupts off on this processor */
     splhigh();

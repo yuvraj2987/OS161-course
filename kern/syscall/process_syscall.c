@@ -73,12 +73,16 @@ void init_pid_table_entry(struct thread* new_thread)
 //when to release? - in sys_waitpid
 void release_pid(pid_t pid)
 {
+	lock_acquire(pid_table_lock);
 	sem_destroy(pid_table[pid]->exit_sem);
 	kfree(pid_table[pid]);
-	lock_acquire(pid_table_lock);
 	if(pid>PID_MIN && pid <= PID_MAX)
 	{
 		pid_table[pid] = NULL;
+	}
+	else
+	{
+		kprintf("Releasing invalid pid: %d", pid);
 	}
 	lock_release(pid_table_lock);
 }
