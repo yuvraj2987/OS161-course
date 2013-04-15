@@ -74,7 +74,10 @@ void init_pid_table_entry(struct thread* new_thread)
 void release_pid(pid_t pid)
 {
 	lock_acquire(pid_table_lock);
-	sem_destroy(pid_table[pid]->exit_sem);
+	if(pid_table[pid]->exit_sem != NULL)
+	{
+		sem_destroy(pid_table[pid]->exit_sem);
+	}
 	kfree(pid_table[pid]);
 	if(pid>PID_MIN && pid <= PID_MAX)
 	{
@@ -114,26 +117,46 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		return err;
 	}
 
-	//thread_fork
+	//child thread
 	struct thread *child_thread = NULL;
-	/*err = thread_fork("Child_Thread",
-			child_fork_entry, tf_child, (unsigned long)addrs_child, &child_thread);
-	*/
-	thread_fork("Child_Thread",
-				child_fork_entry, child_para, NULL, &child_thread);
-	//wait for child to complete tf and addrspace copying
-	P(child_para->child_status_sem);
-
-	if(err != 0)
+	//allocate process structure for child before hand
+	pid_t child_pid = allocate_pid();
+	if(child_thread->t_pid >= MAX_RUNNING_PROCS)
 	{
 		sem_destroy(child_para->child_status_sem);
 		kfree(child_para->tf_child);
 		kfree(child_para->child_addrspace);
 		kfree(child_para);
-		//thread_destroy(child_thread);needed??
-		return err;
+		return ENPROC;
+	}
+	pid_table[child_pid] = (struct process*)kmalloc(sizeof(struct process));
+	if(pid_table[child_pid] == NULL)
+	{
+		sem_destroy(child_para->child_status_sem);
+		kfree(child_para->tf_child);
+		kfree(child_para->child_addrspace);
+		kfree(child_para);
+		return ENOMEM;
 	}
 
+	/*err = thread_fork("Child_Thread",
+			child_fork_entry, tf_child, (unsigned long)addrs_child, &child_thread);
+	*/
+	err = thread_fork("Child_Thread",
+				child_fork_entry, child_para, 0, &child_thread);
+	if(err != 0)
+	{
+		//Failed to create child
+		sem_destroy(child_para->child_status_sem);
+		kfree(child_para->tf_child);
+		kfree(child_para->child_addrspace);
+		kfree(child_para);
+		release_pid(child_pid);
+		return err;
+	}
+	//wait for child to complete tf and addrspace copying
+	P(child_para->child_status_sem);
+	/*
 	child_thread->t_pid = allocate_pid();
 	pid_table[child_thread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
 	if(pid_table[child_thread->t_pid] == NULL)
@@ -142,20 +165,20 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		kfree(child_para->tf_child);
 		kfree(child_para->child_addrspace);
 		kfree(child_para);
-		thread_destroy(child_thread);
 		return ENOMEM;
 	}
-	//copy parents file table into child - Remaining
-	//other book kipping stuff??
+	*/
+	/*
 	if(child_thread->t_pid == MAX_RUNNING_PROCS)
 	{
 		sem_destroy(child_para->child_status_sem);
 		kfree(child_para->tf_child);
 		kfree(child_para->child_addrspace);
 		kfree(child_para);
-		thread_destroy(child_thread);
+		//thread_destroy(child_thread);
 		return ENPROC;
 	}
+	*/
 
 	*retval = child_thread->t_pid;
 	//on success
@@ -163,23 +186,24 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	kfree(child_para->tf_child);
 	kfree(child_para->child_addrspace);
 	kfree(child_para);
-	thread_destroy(child_thread);
+
 	return 0;
 }
 
-
+/*
 void child_fork_entry(void *tf, unsigned long addrs_space)
 {
-	/*(void)tf_child;
-		(void)addrs_child;*/
+	(void)tf_child;
+		(void)addrs_child;
 
 	struct trapframe* tf_child = (struct trapframe *)tf;
 	struct addrspace *addrs_child = (struct addrspace *)addrs_space;
+	*/
 	/*address space is on kernel heap
 	 * mips_usermode function checks it on kernel stack
 	 * therefore copy from kernel heap to stack
 	 */
-	struct trapframe tf_child_stack;
+	/*struct trapframe tf_child_stack;
 	memcpy(&tf_child_stack, tf_child, sizeof(struct trapframe));
 
 	//Mark success for child
@@ -189,13 +213,35 @@ void child_fork_entry(void *tf, unsigned long addrs_space)
 	tf_child-> tf_epc += 4;
 	//load addrs_space into childs curthread ->addrspace
 	curthread->t_addrspace = addrs_child;
-	as_activate(curthread->t_addrspace);
+	as_activate(curthread->t_addrspace);*/
 	/*free the kernel heap memory*/
-	kfree(tf_child);
+	/*kfree(tf_child);
 
 	mips_usermode(&tf_child_stack);
 
 }
+*/
+void child_fork_entry(void *parent_param, unsigned long data2)
+{
+	(void)data2;
+	struct child_process_para *param = (struct child_process_para*)parent_param;
+	//copy tf on stack and addrspace
+	struct trapframe tf_child_stack;
+	memcpy(&tf_child_stack, param->tf_child, sizeof(struct trapframe));
+	curthread->t_addrspace = param->child_addrspace;
+	as_activate(curthread->t_addrspace);
+	//Mark success for child
+	tf_child_stack.tf_a3 = 0;
+	tf_child_stack.tf_v0 = 0;
+	//Increment prog counter
+	tf_child_stack.tf_epc += 4;
+	//Inform parent of copying
+	V(param->child_status_sem);
+	mips_usermode(&tf_child_stack);
+}
+
+
+
 
 /*wait pid*/
 int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
