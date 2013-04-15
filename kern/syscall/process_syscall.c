@@ -163,40 +163,9 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	return 0;
 }
 
-/*
-void child_fork_entry(void *tf, unsigned long addrs_space)
-{
-	(void)tf_child;
-		(void)addrs_child;
-
-	struct trapframe* tf_child = (struct trapframe *)tf;
-	struct addrspace *addrs_child = (struct addrspace *)addrs_space;
-	*/
-	/*address space is on kernel heap
-	 * mips_usermode function checks it on kernel stack
-	 * therefore copy from kernel heap to stack
-	 */
-	/*struct trapframe tf_child_stack;
-	memcpy(&tf_child_stack, tf_child, sizeof(struct trapframe));
-
-	//Mark success for child
-	tf_child->tf_a3 = 0;
-	tf_child->tf_v0 = 0;
-	//Increment prog counter
-	tf_child-> tf_epc += 4;
-	//load addrs_space into childs curthread ->addrspace
-	curthread->t_addrspace = addrs_child;
-	as_activate(curthread->t_addrspace);*/
-	/*free the kernel heap memory*/
-	/*kfree(tf_child);
-
-	mips_usermode(&tf_child_stack);
-
-}
-*/
 void child_fork_entry(void *parent_param, unsigned long data2)
 {
-	(void)data2;
+	(void)data2;//unused
 	struct child_process_para *param = (struct child_process_para*)parent_param;
 	//copy tf on stack and addrspace
 	struct trapframe tf_child_stack;
