@@ -101,10 +101,6 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	struct child_process_para *child_para = (struct child_process_para *)
 											kmalloc(sizeof(struct child_process_para));
 	//Copy tf and addrspace to kernel heap and semaphore to wait
-	/*struct trapframe *tf_child = (struct trapframe *)
-									kmalloc(sizeof(struct trapframe));
-	struct addrspace *addrs_child = NULL;
-	*/
 	child_para->tf_child = (struct trapframe *)
 											kmalloc(sizeof(struct trapframe));
 	child_para->child_addrspace = NULL;
@@ -129,6 +125,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		kfree(child_para);
 		return ENPROC;
 	}
+
 	pid_table[child_pid] = (struct process*)kmalloc(sizeof(struct process));
 	if(pid_table[child_pid] == NULL)
 	{
@@ -139,9 +136,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		return ENOMEM;
 	}
 
-	/*err = thread_fork("Child_Thread",
-			child_fork_entry, tf_child, (unsigned long)addrs_child, &child_thread);
-	*/
+	//fork
 	err = thread_fork("Child_Thread",
 				child_fork_entry, child_para, 0, &child_thread);
 	if(err != 0)
@@ -154,31 +149,9 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		release_pid(child_pid);
 		return err;
 	}
+	init_pid_table_entry(child_thread);
 	//wait for child to complete tf and addrspace copying
 	P(child_para->child_status_sem);
-	/*
-	child_thread->t_pid = allocate_pid();
-	pid_table[child_thread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
-	if(pid_table[child_thread->t_pid] == NULL)
-	{
-		sem_destroy(child_para->child_status_sem);
-		kfree(child_para->tf_child);
-		kfree(child_para->child_addrspace);
-		kfree(child_para);
-		return ENOMEM;
-	}
-	*/
-	/*
-	if(child_thread->t_pid == MAX_RUNNING_PROCS)
-	{
-		sem_destroy(child_para->child_status_sem);
-		kfree(child_para->tf_child);
-		kfree(child_para->child_addrspace);
-		kfree(child_para);
-		//thread_destroy(child_thread);
-		return ENPROC;
-	}
-	*/
 
 	*retval = child_thread->t_pid;
 	//on success
