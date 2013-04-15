@@ -23,7 +23,15 @@ struct process
 	struct thread *self;			/*Pointer to thread structure*/
 };
 
-
+/*
+ * sharing trapframe and semaphore with child
+ * */
+struct child_process_para
+{
+	struct trapframe *tf_child;
+	struct semaphore *child_status_sem;
+	struct addrspace *child_addrspace;
+};
 
 //Global process table
 struct process* pid_table[MAX_RUNNING_PROCS];

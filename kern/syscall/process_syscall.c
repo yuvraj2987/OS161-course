@@ -95,41 +95,75 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 {
 
 	int err;
-	//disable interrupts
-	//int s = splhigh();
-	struct trapframe *tf_child = (struct trapframe *)
+	struct child_process_para *child_para = (struct child_process_para *)
+											kmalloc(sizeof(struct child_process_para));
+	//Copy tf and addrspace to kernel heap and semaphore to wait
+	/*struct trapframe *tf_child = (struct trapframe *)
 									kmalloc(sizeof(struct trapframe));
 	struct addrspace *addrs_child = NULL;
-
-	memcpy(tf_child, tf_parent, sizeof(struct trapframe));
-	err = as_copy(curthread->t_addrspace, &addrs_child);
+	*/
+	child_para->tf_child = (struct trapframe *)
+											kmalloc(sizeof(struct trapframe));
+	child_para->child_addrspace = NULL;
+	child_para->child_status_sem =  sem_create("Child_status", 0);
+	memcpy(child_para->tf_child, tf_parent, sizeof(struct trapframe));
+	err = as_copy(curthread->t_addrspace, &(child_para->child_addrspace));
 	if(err != 0)
 	{
-		kfree(tf_child);
+		kfree(child_para->tf_child);
 		return err;
 	}
 
-	//decide on thread name
+	//thread_fork
 	struct thread *child_thread = NULL;
-	err = thread_fork("Child_Thread",
+	/*err = thread_fork("Child_Thread",
 			child_fork_entry, tf_child, (unsigned long)addrs_child, &child_thread);
+	*/
+	thread_fork("Child_Thread",
+				child_fork_entry, child_para, NULL, &child_thread);
+	//wait for child to complete tf and addrspace copying
+	P(child_para->child_status_sem);
 
 	if(err != 0)
 	{
-		kfree(tf_child);
-		kfree(addrs_child);
+		sem_destroy(child_para->child_status_sem);
+		kfree(child_para->tf_child);
+		kfree(child_para->child_addrspace);
+		kfree(child_para);
+		//thread_destroy(child_thread);needed??
 		return err;
+	}
+
+	child_thread->t_pid = allocate_pid();
+	pid_table[child_thread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
+	if(pid_table[child_thread->t_pid] == NULL)
+	{
+		sem_destroy(child_para->child_status_sem);
+		kfree(child_para->tf_child);
+		kfree(child_para->child_addrspace);
+		kfree(child_para);
+		thread_destroy(child_thread);
+		return ENOMEM;
 	}
 	//copy parents file table into child - Remaining
 	//other book kipping stuff??
 	if(child_thread->t_pid == MAX_RUNNING_PROCS)
 	{
-		kfree(tf_child);
-		kfree(addrs_child);
+		sem_destroy(child_para->child_status_sem);
+		kfree(child_para->tf_child);
+		kfree(child_para->child_addrspace);
+		kfree(child_para);
+		thread_destroy(child_thread);
 		return ENPROC;
 	}
+
 	*retval = child_thread->t_pid;
-	//splx(s);
+	//on success
+	sem_destroy(child_para->child_status_sem);
+	kfree(child_para->tf_child);
+	kfree(child_para->child_addrspace);
+	kfree(child_para);
+	thread_destroy(child_thread);
 	return 0;
 }
 
@@ -156,9 +190,9 @@ void child_fork_entry(void *tf, unsigned long addrs_space)
 	//load addrs_space into childs curthread ->addrspace
 	curthread->t_addrspace = addrs_child;
 	as_activate(curthread->t_addrspace);
-	/*free the kernel heap memory??*/
-	/*kfree(tf_child);
-	kfree(addrs_child);*/
+	/*free the kernel heap memory*/
+	kfree(tf_child);
+
 	mips_usermode(&tf_child_stack);
 
 }
