@@ -145,7 +145,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		sem_destroy(child_para->child_status_sem);
 		kfree(child_para->tf_child);
 		kfree(child_para->child_addrspace);
-		kfree(child_para);
+		kfree(child_para);//free
 		release_pid(child_pid);
 		return err;
 	}
@@ -197,6 +197,7 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	int *kern_status_ptr;
 	int err = copyin(status_ptr, kern_status_ptr, sizeof(int));
 
+	//review erro checks again
 	if(err)
 		return err;
 	if(options != 0)
@@ -208,7 +209,7 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	if(pid_table[pid]->parent_pid != curthread->t_pid)
 		return ECHILD;
 	//decrement smeaphore - wait till exist
-	//Set these values in thread_exit
+	//Set these values in sys_exit
 	P(pid_table[pid]->exit_sem);
 	*kern_status_ptr = pid_table[pid]->exit_code;
 	err = copyout(kern_status_ptr, status_ptr, sizeof(int));
@@ -216,22 +217,20 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	//cleanup
 	release_pid(pid);
 
+
 	return 0;
 }
 
 
 int sys_exit(int exit_code)
 {
-	//disable interupts
-	int s = splhigh();
+
 	//should mark the curthread as zombie
 	thread_exit();
 	//overwrite exit_code
 	pid_table[curthread->t_pid]->exit_code = (_MKWVAL(exit_code) |__WEXITED);
 	//To do- reset parent_pid of child threads
 
-	//enable interrupts
-	splx(s);
 	return 0;
 }
 
