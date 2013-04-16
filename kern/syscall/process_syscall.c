@@ -240,3 +240,15 @@ int sys_getpid(int *ret)
 	*ret = curthread->t_pid;
 	return 0;
 }
+
+
+int tmp_sys_write(int fd, userptr_t buf, size_t nbytes)
+{
+	(void)fd;
+
+	char *kern_buffer;
+	int err = copyin(buf, kern_buffer, nbytes);
+	kprintf(kern_buffer);
+
+	return err;
+}
