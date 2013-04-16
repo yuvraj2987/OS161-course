@@ -95,6 +95,8 @@ void release_pid(pid_t pid)
 	lock_release(pid_table_lock);
 }
 
+
+
 /*
 * Fork System call
 */
@@ -236,8 +238,23 @@ int sys_exit(int exit_code)
 	//overwrite exit_code
 	pid_table[curthread->t_pid]->exit_code = (_MKWVAL(exit_code) |__WEXITED);
 	//To do- reset parent_pid of child threads
-
+	update_childs_parent();
 	return 0;
+}
+
+void update_childs_parent()
+{
+	pid_t exit_process = curthread->t_pid;
+	pid_t new_parent =	pid_table[exit_process]->parent_pid;
+	lock_acquire(pid_table_lock);
+	for(int i=PID_MIN; i<PID_MAX; i++)
+	{
+		if(pid_table[i]->parent_pid == exit_process)
+		{
+			pid_table[i]->parent_pid = new_parent;
+		}
+	}
+	lock_release(pid_table_lock);
 }
 
 
@@ -254,7 +271,8 @@ int tmp_sys_write(int fd, userptr_t buf, size_t nbytes)
 
 	char *kern_buffer;
 	int err = copyin(buf, kern_buffer, nbytes);
-	kprintf(kern_buffer);
+
+	kprintf("%s", kern_buffer);
 
 	return err;
 }

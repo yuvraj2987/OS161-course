@@ -47,4 +47,7 @@ void pid_table_release(void);
 void init_pid_table_entry(struct thread* new_thread);
 void child_fork_entry(void *data1, unsigned long data2);
 
+/*Upadte the parent_pid of childs of exiting process*/
+void update_childs_parent(void);
+
 #endif /* PROCESS_H_ */
