@@ -269,10 +269,23 @@ int tmp_sys_write(int fd, userptr_t buf, size_t nbytes)
 {
 	(void)fd;
 
-	char *kern_buffer;
+	char *kern_buffer = (char *)kmalloc(nbytes);
 	int err = copyin(buf, kern_buffer, nbytes);
 	kern_buffer[nbytes]= '\0';
 	kprintf("%s", kern_buffer);
 
 	return err;
+}
+
+int create_pid_table_entry(void)
+{
+	curthread->t_pid = allocate_pid();
+	pid_table[curthread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
+	if(pid_table[curthread->t_pid] == NULL)
+	{
+		return ENOMEM;
+	}
+	init_pid_table_entry(curthread);
+	pid_table[curthread->t_pid]->parent_pid = 1;
+	return 0;
 }

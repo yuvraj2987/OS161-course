@@ -49,5 +49,6 @@ void child_fork_entry(void *data1, unsigned long data2);
 
 /*Upadte the parent_pid of childs of exiting process*/
 void update_childs_parent(void);
-
+/*Init first pid_table entry*/
+int create_pid_table_entry(void);
 #endif /* PROCESS_H_ */

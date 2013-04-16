@@ -96,7 +96,8 @@ runprogram(char *progname)
 	}
 
 	/*Initi pid_table for 1st user process*/
-	curthread->t_pid = allocate_pid();
+	result = create_pid_table_entry();
+	/*curthread->t_pid = allocate_pid();
 	pid_table[curthread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
 	if(pid_table[curthread->t_pid] == NULL)
 	{
@@ -104,6 +105,7 @@ runprogram(char *progname)
 	}
 	init_pid_table_entry(curthread);
 	pid_table[curthread->t_pid]->parent_pid = 1;
+	*/
 
 	/* Warp to user mode. */
 	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
