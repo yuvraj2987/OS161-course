@@ -44,7 +44,7 @@
 #include <vfs.h>
 #include <syscall.h>
 #include <test.h>
-
+#include <process.h>
 /*
  * Load program "progname" and start running it in usermode.
  * Does not return except on error.
@@ -94,6 +94,16 @@ runprogram(char *progname)
 		/* thread_exit destroys curthread->t_addrspace */
 		return result;
 	}
+
+	/*Initi pid_table for 1st user process*/
+	curthread->t_pid = allocate_pid();
+	pid_table[curthread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
+	if(pid_table[curthread->t_pid] == NULL)
+	{
+		return ENOMEM;
+	}
+	init_pid_table_entry(curthread);
+	pid_table[curthread->t_pid]->parent_pid = 1;
 
 	/* Warp to user mode. */
 	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
