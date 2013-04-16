@@ -50,11 +50,16 @@ pid_t allocate_pid(void)
 {
 	int i = PID_MIN;//2
 	lock_acquire(pid_table_lock);
-	while(pid_table[i] != NULL && i <MAX_RUNNING_PROCS)
+	while(i <MAX_RUNNING_PROCS && pid_table[i] != NULL)
 	{
 		i++;
 	}
 	lock_release(pid_table_lock);
+	//last element is not empty
+	if(pid_table[i]!=NULL)
+	{
+		return MAX_RUNNING_PROCS+1;
+	}
 
 	return i;
 }
@@ -117,7 +122,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	struct thread *child_thread = NULL;
 	//allocate process structure for child before hand
 	pid_t child_pid = allocate_pid();
-	if(child_thread->t_pid >= MAX_RUNNING_PROCS)
+	if(child_pid >MAX_RUNNING_PROCS)
 	{
 		sem_destroy(child_para->child_status_sem);
 		kfree(child_para->tf_child);
@@ -149,6 +154,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		release_pid(child_pid);
 		return err;
 	}
+	child_thread->t_pid = child_pid;
 	init_pid_table_entry(child_thread);
 	//wait for child to complete tf and addrspace copying
 	P(child_para->child_status_sem);

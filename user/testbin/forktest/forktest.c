@@ -60,7 +60,7 @@ dofork(void)
 	if (pid < 0) {
 		warn("fork");
 	}
-	printf("pid = %d", pid);
+
 	return pid;
 }
 
@@ -170,8 +170,8 @@ test(int nowait)
 int
 main(int argc, char *argv[])
 {
-	//int nowait=0;
-	int nowait=1;
+	int nowait=0;
+
 
 	if (argc==2 && !strcmp(argv[1], "-w")) {
 		nowait=1;
