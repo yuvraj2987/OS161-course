@@ -144,7 +144,8 @@ common_prog(int nargs, char **args)
 	//wait for runprogram thread to exit what to do with status and return
 	userptr_t status;
 	int ret_val;
-	sys_waitpid(PID_MIN, status, 0, &ret_val);
+	//sys_waitpid(PID_MIN, status, 0, &ret_val);
+	sys_waitpid(1, status, 0, &ret_val);
 	return 0;
 }
 

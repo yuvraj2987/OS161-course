@@ -279,13 +279,14 @@ int tmp_sys_write(int fd, userptr_t buf, size_t nbytes)
 
 int create_pid_table_entry(void)
 {
-	curthread->t_pid = allocate_pid();
+	//curthread->t_pid = allocate_pid();
+	curthread->t_pid = 1;
 	pid_table[curthread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
 	if(pid_table[curthread->t_pid] == NULL)
 	{
 		return ENOMEM;
 	}
 	init_pid_table_entry(curthread);
-	pid_table[curthread->t_pid]->parent_pid = 1;
+	pid_table[curthread->t_pid]->parent_pid = 0;
 	return 0;
 }
