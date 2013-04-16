@@ -51,7 +51,6 @@
 #include "opt-synchprobs.h"
 #include "opt-defaultscheduler.h"
 
-
 /* Magic number used as a guard value on kernel thread stacks. */
 #define THREAD_STACK_MAGIC 0xbaadf00d
 
@@ -153,6 +152,14 @@ thread_create(const char *name)
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
+	/*ASST2*/
+	int count = 0;
+	for (count = 0; count<MAX_NUMBER_OF_FILES; count++)
+	{
+		thread->fileDescriptor[count] = NULL;
+	}
+
+
 
 	return thread;
 }

@@ -39,6 +39,9 @@
 #include <spinlock.h>
 #include <threadlist.h>
 
+/*ASST2*/
+#include<fileDescriptorNode.h>
+
 struct addrspace;
 struct cpu;
 struct vnode;
@@ -112,6 +115,10 @@ struct thread {
 	struct vnode *t_cwd;		/* current working directory */
 
 	/* add more here as needed */
+	/* ASST2*/
+	/* We just need to initialize it in thread_create
+	 * but need not to destroy in thread_deatroy or in thread_exit as it is array*/
+	struct fileDescriptorNode *fileDescriptor[MAX_NUMBER_OF_FILES];
 };
 
 /* Call once during system startup to allocate data structures. */
