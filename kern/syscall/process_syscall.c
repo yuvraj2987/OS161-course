@@ -271,7 +271,7 @@ int tmp_sys_write(int fd, userptr_t buf, size_t nbytes)
 
 	char *kern_buffer;
 	int err = copyin(buf, kern_buffer, nbytes);
-
+	kern_buffer[nbytes]= '\0';
 	kprintf("%s", kern_buffer);
 
 	return err;
