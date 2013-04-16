@@ -111,7 +111,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	child_para->child_addrspace = NULL;
 	child_para->child_status_sem =  sem_create("Child_status", 0);
 	memcpy(child_para->tf_child, tf_parent, sizeof(struct trapframe));
-	err = as_copy(curthread->t_addrspace, &(child_para->child_addrspace));
+	err = as_copy(curthread->t_addrspace, &child_para->child_addrspace);
 	if(err != 0)
 	{
 		kfree(child_para->tf_child);
@@ -163,7 +163,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	//on success
 	sem_destroy(child_para->child_status_sem);
 	kfree(child_para->tf_child);
-	kfree(child_para->child_addrspace);
+	//kfree(child_para->child_addrspace);
 	kfree(child_para);
 
 	return 0;
