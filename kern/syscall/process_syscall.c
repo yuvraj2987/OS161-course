@@ -78,14 +78,14 @@ void init_pid_table_entry(struct thread* new_thread)
 //when to release? - in sys_waitpid
 void release_pid(pid_t pid)
 {
-	lock_acquire(pid_table_lock);
-	if(pid_table[pid]->exit_sem != NULL)
+	if(pid <= PID_MAX && pid_table[pid]!=NULL)
 	{
-		sem_destroy(pid_table[pid]->exit_sem);
-	}
-	kfree(pid_table[pid]);
-	if(pid>PID_MIN && pid <= PID_MAX)
-	{
+		lock_acquire(pid_table_lock);
+		if(pid_table[pid]->exit_sem != NULL)
+		{
+			sem_destroy(pid_table[pid]->exit_sem);
+		}
+		kfree(pid_table[pid]);
 		pid_table[pid] = NULL;
 	}
 	else
@@ -202,34 +202,45 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	(void)ret;*/
 
 	//error checking
+	if(pid != 1)
+	{
+		if(status_ptr == NULL)
+			return EFAULT;
+		if(ret == NULL)
+			return EFAULT;
+		int *kern_status_ptr;
 
-	if(status_ptr == NULL)
-		return EFAULT;
-	if(ret == NULL)
-		return EFAULT;
-	int *kern_status_ptr;
+		int err = copyin(status_ptr, kern_status_ptr, sizeof(int));
 
-	int err = copyin(status_ptr, kern_status_ptr, sizeof(int));
+		//review erro checks again
+		if(err)
+			return err;
+		if(options != 0)
+			return EINVAL;
+		if(kern_status_ptr == NULL)
+			return EFAULT;
+		if(pid_table[pid] == NULL)
+			return ESRCH;
+		if(pid_table[pid]->parent_pid != curthread->t_pid)
+			return ECHILD;
+		//decrement smeaphore - wait till exist
+		//Set these values in sys_exit
+		P(pid_table[pid]->exit_sem);
+		*kern_status_ptr = pid_table[pid]->exit_code;
+		err = copyout(kern_status_ptr, status_ptr, sizeof(int));
+		*ret = pid;
+		//cleanup
+		release_pid(pid);
+	}//wait is not on the first process
+	else
+	{
+		(void)status_ptr;
+		(void)options;
+		(void)ret;
+		P(pid_table[pid]->exit_sem);
+		release_pid(pid);
 
-	//review erro checks again
-	if(err)
-		return err;
-	if(options != 0)
-		return EINVAL;
-	if(kern_status_ptr == NULL)
-		return EFAULT;
-	if(pid_table[pid] == NULL)
-		return ESRCH;
-	if(pid_table[pid]->parent_pid != curthread->t_pid)
-		return ECHILD;
-	//decrement smeaphore - wait till exist
-	//Set these values in sys_exit
-	P(pid_table[pid]->exit_sem);
-	*kern_status_ptr = pid_table[pid]->exit_code;
-	err = copyout(kern_status_ptr, status_ptr, sizeof(int));
-	*ret = pid;
-	//cleanup
-	release_pid(pid);
+	}
 
 
 	return 0;
