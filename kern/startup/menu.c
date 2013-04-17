@@ -144,7 +144,12 @@ common_prog(int nargs, char **args)
 	//wait for runprogram thread to exit what to do with status and return
 	int status  = 0;
 	int ret_val = 0;
-	sys_waitpid(1, (userptr_t)&status, 0, &ret_val);
+	//wait for runprogram to load
+	do
+	{
+		;
+	}while(sys_waitpid(1, (userptr_t)&status, 0, &ret_val) != ESRCH);
+
 
 
 	return 0;

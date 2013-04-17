@@ -238,11 +238,11 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 		(void)status_ptr;
 		(void)options;
 		(void)ret;
+		if(pid_table[pid] == NULL)
+			return ESRCH;
 		P(pid_table[pid]->exit_sem);
 		release_pid(pid);
-
 	}
-
 
 	return 0;
 }
