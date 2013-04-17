@@ -129,6 +129,7 @@ dowait(int nowait, int pid)
 /*
  * Actually run the test.
  */
+
 static
 void
 test(int nowait)
@@ -159,6 +160,7 @@ test(int nowait)
 	 * These must be called in reverse order to avoid waiting
 	 * improperly.
 	 */
+
 	dowait(nowait, pid3);
 	dowait(nowait, pid2);
 	dowait(nowait, pid1);
@@ -170,6 +172,8 @@ test(int nowait)
 int
 main(int argc, char *argv[])
 {
+
+
 	//int nowait=0;
 	int nowait=1;
 

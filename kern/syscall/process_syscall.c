@@ -239,6 +239,7 @@ int sys_exit(int exit_code)
 	pid_table[curthread->t_pid]->exit_code = (_MKWVAL(exit_code) |__WEXITED);
 	//To do- reset parent_pid of child threads
 	update_childs_parent();
+	V(pid_table[curthread->t_pid]->exit_sem);
 	return 0;
 }
 
