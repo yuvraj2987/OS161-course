@@ -142,9 +142,11 @@ common_prog(int nargs, char **args)
 		return result;
 	}
 	//wait for runprogram thread to exit what to do with status and return
-	userptr_t status;
-	int ret_val;
-	sys_waitpid(1, status, 0, &ret_val);
+	int status  = 0;
+	int ret_val = 0;
+	sys_waitpid(1, (userptr_t)&status, 0, &ret_val);
+
+
 	return 0;
 }
 

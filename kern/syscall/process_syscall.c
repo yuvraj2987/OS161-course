@@ -202,7 +202,13 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	(void)ret;*/
 
 	//error checking
+
+	if(status_ptr == NULL)
+		return EFAULT;
+	if(ret == NULL)
+		return EFAULT;
 	int *kern_status_ptr;
+
 	int err = copyin(status_ptr, kern_status_ptr, sizeof(int));
 
 	//review erro checks again
@@ -232,14 +238,12 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 
 int sys_exit(int exit_code)
 {
-
-	//should mark the curthread as zombie
-	thread_exit();
-	//overwrite exit_code
-	pid_table[curthread->t_pid]->exit_code = (_MKWVAL(exit_code) |__WEXITED);
-	//To do- reset parent_pid of child threads
 	update_childs_parent();
+	pid_table[curthread->t_pid]->exit_code = (_MKWVAL(exit_code) |__WEXITED);
+	pid_table[curthread->t_pid]->exited = 1;//true
+	//should mark the curthread as zombie
 	V(pid_table[curthread->t_pid]->exit_sem);
+	thread_exit();
 	return 0;
 }
 
@@ -250,7 +254,7 @@ void update_childs_parent()
 	lock_acquire(pid_table_lock);
 	for(int i=PID_MIN; i<PID_MAX; i++)
 	{
-		if(pid_table[i]->parent_pid == exit_process)
+		if(pid_table[i] != NULL && pid_table[i]->parent_pid == exit_process)
 		{
 			pid_table[i]->parent_pid = new_parent;
 		}
