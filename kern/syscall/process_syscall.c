@@ -78,9 +78,10 @@ void init_pid_table_entry(struct thread* new_thread)
 //when to release? - in sys_waitpid
 void release_pid(pid_t pid)
 {
+	lock_acquire(pid_table_lock);
 	if(pid <= PID_MAX && pid_table[pid]!=NULL)
 	{
-		lock_acquire(pid_table_lock);
+
 		if(pid_table[pid]->exit_sem != NULL)
 		{
 			sem_destroy(pid_table[pid]->exit_sem);
