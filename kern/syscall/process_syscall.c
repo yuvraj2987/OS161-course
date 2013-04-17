@@ -307,3 +307,12 @@ int create_pid_table_entry(void)
 	pid_table[curthread->t_pid]->parent_pid = 0;
 	return 0;
 }
+/*
+int sys_exev(char *progname, char **args)
+*/
+int sys_exev(userptr_t progname, userptr_t args)
+{
+	(void)progname;
+	(void)args;
+	return 0;
+}
