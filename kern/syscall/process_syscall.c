@@ -264,7 +264,7 @@ void update_childs_parent()
 	pid_t exit_process = curthread->t_pid;
 	pid_t new_parent =	pid_table[exit_process]->parent_pid;
 	lock_acquire(pid_table_lock);
-	for(int i=PID_MIN; i<PID_MAX; i++)
+	for(int i=PID_MIN; i<MAX_RUNNING_PROCS; i++)
 	{
 		if(pid_table[i] != NULL && pid_table[i]->parent_pid == exit_process)
 		{

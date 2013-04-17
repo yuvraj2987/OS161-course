@@ -147,10 +147,9 @@ common_prog(int nargs, char **args)
 	//wait for runprogram to load
 	do
 	{
+		//nothing
 		;
 	}while(sys_waitpid(1, (userptr_t)&status, 0, &ret_val) != ESRCH);
-
-
 
 	return 0;
 }
