@@ -22,6 +22,8 @@
 #include <spl.h>
 #include <copyinout.h>
 #include <kern/wait.h>
+#include <kern/fcntl.h>
+#include <vfs.h>
 
 /*Process table init and release called only once main->boot*/
 void pid_table_init(void)
@@ -107,10 +109,10 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 
 	int err;
 	struct child_process_para *child_para = (struct child_process_para *)
-													kmalloc(sizeof(struct child_process_para));
+															kmalloc(sizeof(struct child_process_para));
 	//Copy tf and addrspace to kernel heap and semaphore to wait
 	child_para->tf_child = (struct trapframe *)
-													kmalloc(sizeof(struct trapframe));
+															kmalloc(sizeof(struct trapframe));
 	child_para->child_addrspace = NULL;
 	child_para->child_status_sem =  sem_create("Child_status", 0);
 	memcpy(child_para->tf_child, tf_parent, sizeof(struct trapframe));
@@ -312,18 +314,66 @@ int sys_exev(char *progname, char **args)
  */
 int sys_exev(char *progname, char **args)
 {
-	/*
-	(void)progname;
-	(void)args;
-	 */
+	struct vnode *v;
+	vaddr_t entrypoint, stackptr;
+	int result;
+
 	if(progname == NULL || args==NULL)
 		return EFAULT;
+
+
 	int err;
 	/*Copy Progname to kernel stack*/
 	char k_progname[PATH_MAX];
 	err = copyin((userptr_t)progname, k_progname, PATH_MAX);
 	if(err)
 		return err;
+
+	/**
+	 * Steps from runprogram
+	 * */
+
+	/* Open the file. */
+	result = vfs_open(k_progname, O_RDONLY, 0, &v);
+	if (result) {
+		return result;
+	}
+
+	/* We should be a new thread. */
+	KASSERT(curthread->t_addrspace == NULL);
+
+	/* Create a new address space. */
+	curthread->t_addrspace = as_create();
+	if (curthread->t_addrspace==NULL) {
+		vfs_close(v);
+		return ENOMEM;
+	}
+
+	/* Activate it. */
+	as_activate(curthread->t_addrspace);
+
+	/* Load the executable. */
+	result = load_elf(v, &entrypoint);
+	if (result) {
+		/* thread_exit destroys curthread->t_addrspace */
+		vfs_close(v);
+		return result;
+	}
+
+	/* Done with the file now. */
+	vfs_close(v);
+
+	/* Define the user stack in the address space */
+	result = as_define_stack(curthread->t_addrspace, &stackptr);
+	if (result) {
+		/* thread_exit destroys curthread->t_addrspace */
+		return result;
+	}
+
+	/*
+	 * Copy args list to kargv
+	 *
+	 * */
 
 	char *kargs_ptr[MAX_ARGS_NUMS];
 	int argc_count = 0;
@@ -352,7 +402,7 @@ int sys_exev(char *progname, char **args)
 		}
 		total_kargs_str_size += str_size;
 	}
-	*/
+	 */
 	userptr_t kargv[4*kargc+ kargc*ARGS_STR_LEN];
 	int strng_ptr = 4*kargc;
 	for(int i=0; i<kargc; i++)
@@ -371,6 +421,8 @@ int sys_exev(char *progname, char **args)
 		kargv[i*4]=kargv[strng_ptr];
 		strng_ptr +=kargs_len;
 	}
+
+
 
 
 
