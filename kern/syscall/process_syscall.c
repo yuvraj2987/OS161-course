@@ -325,15 +325,53 @@ int sys_exev(char *progname, char **args)
 	if(err)
 		return err;
 
-	char *kargv_ptr[MAX_ARGS];
-	int arg_count = 0;
-	while(args[arg_count] != NULL)
+	char *kargs_ptr[MAX_ARGS_NUMS];
+	int argc_count = 0;
+	while(args[argc_count] != NULL)
 	{
-		err = copyin((userptr_t)args[arg_count], kargv_ptr[arg_count], sizeof(userptr_t));
+		err = copyin((userptr_t)args[argc_count], kargs_ptr[argc_count], sizeof(userptr_t));
 		if(err)
 			return EFAULT;
-		arg_count++;
+		argc_count++;
 	}
+	int kargc = argc_count+1;
+	if(kargc > MAX_ARGS_NUMS)
+		return E2BIG;
+	/*
+	char *kargs_strs[kargc];
+	size_t total_kargs_str_size =0;
+	for(int i=0; i<kargc; i++)
+	{
+		size_t str_size = strlen(kargs_ptr[i]);
+		size_t actual_len;
+		kargs_strs[i]   = (char *)kmalloc(str_size);
+		err = copyinstr((userptr_t)kargs_ptr[i], kargs_strs[i], str_size, &actual_len);
+		if(err)
+		{
+			return err;
+		}
+		total_kargs_str_size += str_size;
+	}
+	*/
+	userptr_t kargv[4*kargc+ kargc*ARGS_STR_LEN];
+	int strng_ptr = 4*kargc;
+	for(int i=0; i<kargc; i++)
+	{
+		size_t kargs_len = strlen(kargs_ptr[i]);
+		size_t len;
+		if(kargs_len > ARGS_STR_LEN)
+		{
+			return E2BIG;
+		}
+		err = copyinstr((userptr_t)kargs_ptr[i], (char *)kargv[strng_ptr], kargs_len, &len);
+		if(err)
+		{
+			return err;
+		}
+		kargv[i*4]=kargv[strng_ptr];
+		strng_ptr +=kargs_len;
+	}
+
 
 
 	return 0;
