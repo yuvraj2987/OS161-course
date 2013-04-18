@@ -214,6 +214,8 @@ void child_fork_entry(void *parent_param, unsigned long data2)
 
 
 /*wait pid*/
+/**pid_t
+waitpid(pid_t pid, int *status, int options);**/
 int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 {
 	/*(void)pid;
@@ -228,16 +230,16 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 			return EFAULT;
 		if(ret == NULL)
 			return EFAULT;
-		int *kern_status_ptr;
+		int kern_status;
 
-		int err = copyin(status_ptr, kern_status_ptr, sizeof(int));
+		int err = copyin(status_ptr, &kern_status, sizeof(int));
 
 		//review erro checks again
 		if(err)
 			return err;
 		if(options != 0)
 			return EINVAL;
-		if(kern_status_ptr == NULL)
+		if(&kern_status == NULL)
 			return EFAULT;
 		if(pid_table[pid] == NULL)
 			return ESRCH;
@@ -246,8 +248,8 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 		//decrement smeaphore - wait till exist
 		//Set these values in sys_exit
 		P(pid_table[pid]->exit_sem);
-		*kern_status_ptr = pid_table[pid]->exit_code;
-		err = copyout(kern_status_ptr, status_ptr, sizeof(int));
+		kern_status = pid_table[pid]->exit_code;
+		err = copyout(&kern_status, status_ptr, sizeof(int));
 		*ret = pid;
 		//cleanup
 		release_pid(pid);
@@ -281,6 +283,9 @@ int sys_exit(int exit_code)
 void update_childs_parent()
 {
 	pid_t exit_process = curthread->t_pid;
+	//pid == 0 nothing is defined
+	if(exit_process == 0)
+		return;
 	pid_t new_parent =	pid_table[exit_process]->parent_pid;
 	lock_acquire(pid_table_lock);
 	for(int i=PID_MIN; i<MAX_RUNNING_PROCS; i++)

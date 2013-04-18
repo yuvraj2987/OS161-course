@@ -97,6 +97,7 @@ runprogram(char *progname)
 
 	/*Initi pid_table for 1st user process*/
 	pid_table[1]->self = curthread;
+	curthread->t_pid = 1;
 	//creating in menu.c
 	//result = create_pid_table_entry();
 	//if (result) {
