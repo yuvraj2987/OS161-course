@@ -137,9 +137,11 @@ syscall(struct trapframe *tf)
 				getpid(void); */
 		err = sys_getpid(&retval);
 		break;
+	/*
 	case SYS_write:
 		err = tmp_sys_write((int)tf->tf_a0, (userptr_t)tf->tf_a1, (size_t)tf->tf_a2);
 		break;
+		*/
 	case SYS_execv:
 		/*int
 	    	execv(const char *program, char **args);
