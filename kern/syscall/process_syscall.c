@@ -314,26 +314,24 @@ int sys_exev(char *progname, char **args)
  */
 int sys_exev(char *progname, char **args)
 {
-	struct vnode *v;
-	vaddr_t entrypoint, stackptr;
-	int result;
-
 	if(progname == NULL || args==NULL)
 		return EFAULT;
-
-
 	int err;
 	/*Copy Progname to kernel stack*/
 	char k_progname[PATH_MAX];
 	err = copyin((userptr_t)progname, k_progname, PATH_MAX);
 	if(err)
 		return err;
-
 	/**
 	 * Steps from runprogram
 	 * */
+	struct vnode *v;
+	vaddr_t entrypoint, stackptr;
+	int result;
+
 
 	/* Open the file. */
+
 	result = vfs_open(k_progname, O_RDONLY, 0, &v);
 	if (result) {
 		return result;
@@ -371,7 +369,7 @@ int sys_exev(char *progname, char **args)
 	}
 
 	/*
-	 * Copy args list to kargv
+	 * Copy args string pointer list
 	 *
 	 * */
 
@@ -403,6 +401,13 @@ int sys_exev(char *progname, char **args)
 		total_kargs_str_size += str_size;
 	}
 	 */
+	/*
+	 * kargv[0]->char* to 1st argument
+	 * 1st argument -> kargv[4*kargc]
+	 *
+	 * Copy argument list in userptr_t kargv
+	 *
+	 * */
 	userptr_t kargv[4*kargc+ kargc*ARGS_STR_LEN];
 	int strng_ptr = 4*kargc;
 	for(int i=0; i<kargc; i++)
@@ -422,9 +427,37 @@ int sys_exev(char *progname, char **args)
 		strng_ptr +=kargs_len;
 	}
 
+	/*
+	 * Fill kargv[kargc] with stackptrs
+	 * */
+	userptr_t str_stack_addr = (userptr_t)stackptr - (4*kargc);
+	for(int i=0; i<kargc; i++)
+	{
+		size_t str_len = strlen((char*)kargv[4*i]);
+		kargv[4*i] 	   =  str_stack_addr;
+		//update str_stack_ptr
+		str_stack_addr -= str_len;
+	}
 
+	err = copyout(kargv, (userptr_t)stackptr, sizeof(kargv));
+	if(err)
+		return err;
 
+	//update the stackptr
+	userptr_t argv = (userptr_t)stackptr;
+	stackptr = stackptr - sizeof(kargv);
 
+	/*
+	 * Copied from runprogram steps
+	 * */
+
+	/* Warp to user mode. */
+	enter_new_process(kargc /*argc*/, argv /*userspace addr of argv*/,
+			stackptr, entrypoint);
+
+	/* enter_new_process does not return. */
+	panic("enter_new_process returned\n");
+	return EINVAL;
 
 	return 0;
 }
