@@ -27,6 +27,8 @@
  * SUCH DAMAGE.
  */
 
+#include <uio.h>
+
 #ifndef _SYSCALL_H_
 #define _SYSCALL_H_
 
@@ -57,6 +59,18 @@ void enter_new_process(int argc, userptr_t argv, vaddr_t stackptr,
 
 int sys_reboot(int code);
 int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
+/*ASST2*/
+int sys_initialize_fd(void);
+int sys_open(const_userptr_t filePath, int flag, int * retval);
+int sys_close(int fd, int *retval);
+int sys_read(int fd, const_userptr_t buffer, size_t bufferLen, int *retval);
+int sys_write(int fd, const_userptr_t buffer, size_t bufferLen, int *retval);
+int sys_dup2(int oldfd, int newfd, int *retval);
+int sys_lseek(int fd, off_t location, int whence, int *retval, int *retval_v1);
+int sys_chdir(const_userptr_t newPath, int * retval);
+int sys__getcwd(const_userptr_t buffer, int bufferLen, int *retval);
+void my_uio_kinit(struct iovec *iov, struct uio *u,
+		void *kbuf, size_t len, off_t pos, enum uio_rw rw);
 
 //Process system calls
 int sys_fork(struct trapframe *tf, int *ret);
