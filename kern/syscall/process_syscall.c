@@ -126,10 +126,10 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 
 	int err;
 	struct child_process_para *child_para = (struct child_process_para *)
-															kmalloc(sizeof(struct child_process_para));
+																	kmalloc(sizeof(struct child_process_para));
 	//Copy tf and addrspace to kernel heap and semaphore to wait
 	child_para->tf_child = (struct trapframe *)
-															kmalloc(sizeof(struct trapframe));
+																	kmalloc(sizeof(struct trapframe));
 	child_para->child_addrspace = NULL;
 	child_para->child_status_sem =  sem_create("Child_status", 0);
 	memcpy(child_para->tf_child, tf_parent, sizeof(struct trapframe));
@@ -329,9 +329,43 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	int err;
 	/*Copy Progname to kernel stack*/
 	char k_progname[PATH_MAX];
-	err = copyin((userptr_t)progname, k_progname, PATH_MAX);
+	size_t progname_actual_len;
+	err = copyinstr((userptr_t)progname, k_progname, PATH_MAX, &progname_actual_len);
 	if(err)
 		return err;
+
+	/*
+	 * Copy args string pointer list
+	 *
+	 * */
+
+	//copy args pointers
+	const_userptr_t kargs_ptr[MAX_ARGS_NUMS];
+	int argc_count = 0;
+	do
+	{
+		err = copyin((userptr_t)&args[argc_count], &kargs_ptr[argc_count], sizeof(userptr_t));
+		if(err)
+			return EFAULT;
+
+		argc_count++;
+	}while(kargs_ptr[argc_count-1] != NULL);
+
+	//int kargc = argc_count+1;
+	int kargc = argc_count;
+	if(kargc > MAX_ARGS_NUMS)
+		return E2BIG;
+	//copy argument string
+	char* kargv[kargc];
+	for(int i=0; i<kargc-1; i++)
+	{
+		size_t len;
+		//release it at the end
+		kargv[i] = (char *) kmalloc(sizeof(char *));
+		err = copyinstr(kargs_ptr[i], kargv[i], NAME_MAX, &len);
+	}
+
+
 	/**
 	 * Steps from runprogram
 	 * */
@@ -347,8 +381,8 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 		return result;
 	}
 
-	/* We should be a new thread. */
-	KASSERT(curthread->t_addrspace == NULL);
+	/* We should be a new thread.  not for execv*/
+	//KASSERT(curthread->t_addrspace == NULL);
 
 	/* Create a new address space. */
 	curthread->t_addrspace = as_create();
@@ -379,36 +413,10 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	}
 
 	/*
-	 * Copy args string pointer list
-	 *
-	 * */
-
-	const_userptr_t kargs_ptr[MAX_ARGS_NUMS];
-	int argc_count = 0;
-
-	do
-	{
-		err = copyin((userptr_t)&args[argc_count], &kargs_ptr[argc_count], sizeof(userptr_t));
-		if(err)
-			return EFAULT;
-
-		argc_count++;
-	}while(kargs_ptr[argc_count] != NULL);
-
-	//int kargc = argc_count+1;
-	int kargc = argc_count;
-	if(kargc > MAX_ARGS_NUMS)
-		return E2BIG;
-	char* kargv[kargc];
-	for(int i=0; i<kargc; i++)
-	{
-		size_t len;
-		//release it at the end
-		kargv[i] = (char *) kmalloc(sizeof(char *));
-		err = copyinstr(kargs_ptr[i], kargv[i], NAME_MAX, &len);
-	}
+	 * create a kernel buffer with args strings and pointers
+	 * **/
 	size_t buffer_size = (kargc*4);
-	for(int i =0; i<kargc; i++)
+	for(int i =0; i<kargc-1; i++)
 	{
 		size_t str_len = strlen(kargv[i]);
 		buffer_size += str_len+1;
@@ -419,7 +427,7 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 		buffer[i] = 0;
 	}
 	int str_ptr = kargc*4;
-	for(int i=0; i<kargc; i++)
+	for(int i=0; i<kargc-1; i++)
 	{
 		strcpy(buffer[str_ptr], kargv[i]);
 		buffer[i*4] = buffer[str_ptr];
@@ -428,7 +436,7 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	}
 	vaddr_t buf_base_addrs = stackptr - (vaddr_t)buffer_size;
 	vaddr_t buf_str_addrs  = buf_base_addrs + 4*kargc;
-	for(int i =0; i<kargc; i++)
+	for(int i =0; i<kargc-1; i++)
 	{
 		buffer[i*4] = (char *)buf_str_addrs;
 		size_t str_len = strlen(buffer[i*4]);
@@ -437,7 +445,7 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 
 	err = copyout(buffer, (userptr_t)buf_base_addrs, buffer_size);
 	//release kargv
-	for(int i =0; i<kargc; i++)
+	for(int i =0; i<kargc-1; i++)
 	{
 		kfree(kargv[i]);
 	}
