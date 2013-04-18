@@ -140,7 +140,7 @@ syscall(struct trapframe *tf)
 	    	/*int
 	    	execv(const char *program, char **args);
 	    	on sucess - no return*/
-	    	err = sys_exev((char *)tf->tf_a0, (char **)tf->tf_a1);
+	    	err = sys_exev((const_userptr_t)tf->tf_a0, (userptr_t *)tf->tf_a1);
 	    	break;
 	    default:
 		kprintf("Unknown syscall %d\n", callno);

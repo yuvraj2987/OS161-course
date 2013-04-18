@@ -312,7 +312,7 @@ int create_pid_table_entry(void)
 /*
 int sys_exev(char *progname, char **args)
  */
-int sys_exev(char *progname, char **args)
+int sys_exev(const_userptr_t  progname, userptr_t *args)
 {
 	if(progname == NULL || args==NULL)
 		return EFAULT;
@@ -373,8 +373,9 @@ int sys_exev(char *progname, char **args)
 	 *
 	 * */
 
-	char *kargs_ptr[MAX_ARGS_NUMS];
+	const_userptr_t kargs_ptr[MAX_ARGS_NUMS];
 	int argc_count = 0;
+	/*
 	while(args[argc_count] != NULL)
 	{
 		err = copyin((userptr_t)args[argc_count], kargs_ptr[argc_count], sizeof(userptr_t));
@@ -382,82 +383,75 @@ int sys_exev(char *progname, char **args)
 			return EFAULT;
 		argc_count++;
 	}
-	int kargc = argc_count+1;
+	*/
+	do
+	{
+		err = copyin((userptr_t)&args[argc_count], &kargs_ptr[argc_count], sizeof(userptr_t));
+		if(err)
+			return EFAULT;
+
+		argc_count++;
+	}while(kargs_ptr[argc_count] != NULL);
+
+	//int kargc = argc_count+1;
+	int kargc = argc_count;
 	if(kargc > MAX_ARGS_NUMS)
 		return E2BIG;
-	/*
-	char *kargs_strs[kargc];
-	size_t total_kargs_str_size =0;
+	char* kargv[kargc];
 	for(int i=0; i<kargc; i++)
 	{
-		size_t str_size = strlen(kargs_ptr[i]);
-		size_t actual_len;
-		kargs_strs[i]   = (char *)kmalloc(str_size);
-		err = copyinstr((userptr_t)kargs_ptr[i], kargs_strs[i], str_size, &actual_len);
-		if(err)
-		{
-			return err;
-		}
-		total_kargs_str_size += str_size;
-	}
-	 */
-	/*
-	 * kargv[0]->char* to 1st argument
-	 * 1st argument -> kargv[4*kargc]
-	 *
-	 * Copy argument list in userptr_t kargv
-	 *
-	 * */
-	userptr_t kargv[4*kargc+ kargc*ARGS_STR_LEN];
-	int strng_ptr = 4*kargc;
-	for(int i=0; i<kargc; i++)
-	{
-		size_t kargs_len = strlen(kargs_ptr[i]);
 		size_t len;
-		if(kargs_len > ARGS_STR_LEN)
-		{
-			return E2BIG;
-		}
-		err = copyinstr((userptr_t)kargs_ptr[i], (char *)kargv[strng_ptr], kargs_len, &len);
-		if(err)
-		{
-			return err;
-		}
-		kargv[i*4]=kargv[strng_ptr];
-		strng_ptr +=kargs_len;
+		//release it at the end
+		kargv[i] = (char *) kmalloc(sizeof(char *));
+		err = copyinstr(kargs_ptr[i], kargv[i], NAME_MAX, &len);
 	}
-
-	/*
-	 * Fill kargv[kargc] with stackptrs
-	 * */
-	userptr_t str_stack_addr = (userptr_t)stackptr - (4*kargc);
+	size_t buffer_size = (kargc*4);
+	for(int i =0; i<kargc; i++)
+	{
+		size_t str_len = strlen(kargv[i]);
+		buffer_size += str_len+1;
+	}
+	char *buffer[buffer_size];
+	for(unsigned int i=0; i<buffer_size; i++)
+	{
+		buffer[i] = 0;
+	}
+	int str_ptr = kargc*4;
 	for(int i=0; i<kargc; i++)
 	{
-		size_t str_len = strlen((char*)kargv[4*i]);
-		kargv[4*i] 	   =  str_stack_addr;
-		//update str_stack_ptr
-		str_stack_addr -= str_len;
+		strcpy(buffer[str_ptr], kargv[i]);
+		buffer[i*4] = buffer[str_ptr];
+		size_t str_len = strlen(kargv[i]);
+		str_ptr += str_len+1;
+	}
+	vaddr_t buf_base_addrs = stackptr - (vaddr_t)buffer_size;
+	vaddr_t buf_str_addrs  = buf_base_addrs + 4*kargc;
+	for(int i =0; i<kargc; i++)
+	{
+		buffer[i*4] = (char *)buf_str_addrs;
+		size_t str_len = strlen(buffer[i*4]);
+		buf_str_addrs += str_len+1;
 	}
 
-	err = copyout(kargv, (userptr_t)stackptr, sizeof(kargv));
-	if(err)
-		return err;
-
-	//update the stackptr
-	userptr_t argv = (userptr_t)stackptr;
-	stackptr = stackptr - sizeof(kargv);
-
+	err = copyout(buffer, (userptr_t)buf_base_addrs, buffer_size);
+	//release kargv
+	for(int i =0; i<kargc; i++)
+	{
+		kfree(kargv[i]);
+	}
 	/*
 	 * Copied from runprogram steps
 	 * */
 
 	/* Warp to user mode. */
-	enter_new_process(kargc /*argc*/, argv /*userspace addr of argv*/,
+
+	enter_new_process(kargc /*argc*/, (userptr_t)buf_base_addrs /*userspace addr of argv*/,
 			stackptr, entrypoint);
 
 	/* enter_new_process does not return. */
+	/*
 	panic("enter_new_process returned\n");
-	return EINVAL;
+	return EINVAL;*/
 
 	return 0;
 }
