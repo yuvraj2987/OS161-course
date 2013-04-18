@@ -99,18 +99,18 @@ void release_pid(pid_t pid)
 
 
 /*
-* Fork System call
-*/
+ * Fork System call
+ */
 
 int sys_fork(struct trapframe* tf_parent, int *retval)
 {
 
 	int err;
 	struct child_process_para *child_para = (struct child_process_para *)
-											kmalloc(sizeof(struct child_process_para));
+													kmalloc(sizeof(struct child_process_para));
 	//Copy tf and addrspace to kernel heap and semaphore to wait
 	child_para->tf_child = (struct trapframe *)
-											kmalloc(sizeof(struct trapframe));
+													kmalloc(sizeof(struct trapframe));
 	child_para->child_addrspace = NULL;
 	child_para->child_status_sem =  sem_create("Child_status", 0);
 	memcpy(child_para->tf_child, tf_parent, sizeof(struct trapframe));
@@ -146,7 +146,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 
 	//fork
 	err = thread_fork("Child_Thread",
-				child_fork_entry, child_para, 0, &child_thread);
+			child_fork_entry, child_para, 0, &child_thread);
 	if(err != 0)
 	{
 		//Failed to create child
@@ -309,10 +309,32 @@ int create_pid_table_entry(void)
 }
 /*
 int sys_exev(char *progname, char **args)
-*/
-int sys_exev(userptr_t progname, userptr_t args)
+ */
+int sys_exev(char *progname, char **args)
 {
+	/*
 	(void)progname;
 	(void)args;
+	 */
+	if(progname == NULL || args==NULL)
+		return EFAULT;
+	int err;
+	/*Copy Progname to kernel stack*/
+	char k_progname[PATH_MAX];
+	err = copyin((userptr_t)progname, k_progname, PATH_MAX);
+	if(err)
+		return err;
+
+	char *kargv_ptr[MAX_ARGS];
+	int arg_count = 0;
+	while(args[arg_count] != NULL)
+	{
+		err = copyin((userptr_t)args[arg_count], kargv_ptr[arg_count], sizeof(userptr_t));
+		if(err)
+			return EFAULT;
+		arg_count++;
+	}
+
+
 	return 0;
 }

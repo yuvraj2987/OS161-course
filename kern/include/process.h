@@ -12,7 +12,7 @@
 #include <synch.h>
 
 #define MAX_RUNNING_PROCS	256
-
+#define MAX_ARGS			 64
 
 struct process
 {
