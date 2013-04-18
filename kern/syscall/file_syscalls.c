@@ -2,7 +2,6 @@
 #include <types.h>
 #include <limits.h>
 #include <syscall.h>
-
 #include <kern/errno.h>
 #include <lib.h>
 #include <array.h>
@@ -17,6 +16,7 @@
 #include <uio.h>
 #include <kern/seek.h>
 #include <kern/stat.h>
+
 
 int sys_initialize_fd()
 {
