@@ -96,11 +96,15 @@ runprogram(char *progname)
 	}
 
 	/*Initi pid_table for 1st user process*/
-	result = create_pid_table_entry();
-	if (result) {
+	pid_table[1]->self = curthread;
+	//creating in menu.c
+	//result = create_pid_table_entry();
+	//if (result) {
 			/* thread_exit destroys curthread->t_addrspace */
-			return result;
-		}
+		//	return result;
+		//}
+
+
 
 	/* Warp to user mode. */
 	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,

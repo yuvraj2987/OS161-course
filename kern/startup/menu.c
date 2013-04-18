@@ -39,6 +39,7 @@
 #include <vfs.h>
 #include <sfs.h>
 #include <syscall.h>
+#include <process.h>
 #include <test.h>
 #include "opt-synchprobs.h"
 #include "opt-sfs.h"
@@ -142,15 +143,22 @@ common_prog(int nargs, char **args)
 		return result;
 	}
 	//wait for runprogram thread to exit what to do with status and return
+	//create pid_table entry
+	result = create_runprog_pid_table_entry();
+	if(result)
+		return result;
+
 	int status  = 0;
 	int ret_val = 0;
 	//wait for runprogram to init pid_table_entry
+	/*
 	do
 	{
 		//nothing
 		;
 	}while(sys_waitpid(1, (userptr_t)&status, 0, &ret_val) == ESRCH);
-
+	*/
+	sys_waitpid(1, (userptr_t)&status, 0, &ret_val);
 	return 0;
 }
 

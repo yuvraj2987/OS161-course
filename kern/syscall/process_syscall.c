@@ -98,6 +98,23 @@ void release_pid(pid_t pid)
 	lock_release(pid_table_lock);
 }
 
+int create_runprog_pid_table_entry(void)
+{
+	//runprog pid = 1 always
+	pid_t pid = 1;
+	pid_table[pid] = (struct process*)kmalloc(sizeof(struct process));
+	if(pid_table[pid] == NULL)
+	{
+		return ENOMEM;
+	}
+	pid_table[pid]->exited = 0;	//false
+
+
+	pid_table[pid]->exit_code = 0;
+	pid_table[pid]->exit_sem = sem_create("runprogram", 0);
+	pid_table[pid]->parent_pid = 0;
+	return 0;
+}
 
 
 /*
@@ -296,19 +313,7 @@ int tmp_sys_write(int fd, userptr_t buf, size_t nbytes)
 	return err;
 }
 
-int create_pid_table_entry(void)
-{
-	//curthread->t_pid = allocate_pid();
-	curthread->t_pid = 1;
-	pid_table[curthread->t_pid] = (struct process*)kmalloc(sizeof(struct process));
-	if(pid_table[curthread->t_pid] == NULL)
-	{
-		return ENOMEM;
-	}
-	init_pid_table_entry(curthread);
-	pid_table[curthread->t_pid]->parent_pid = 0;
-	return 0;
-}
+
 /*
 int sys_exev(char *progname, char **args)
  */
