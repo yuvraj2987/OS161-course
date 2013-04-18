@@ -375,15 +375,7 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 
 	const_userptr_t kargs_ptr[MAX_ARGS_NUMS];
 	int argc_count = 0;
-	/*
-	while(args[argc_count] != NULL)
-	{
-		err = copyin((userptr_t)args[argc_count], kargs_ptr[argc_count], sizeof(userptr_t));
-		if(err)
-			return EFAULT;
-		argc_count++;
-	}
-	*/
+
 	do
 	{
 		err = copyin((userptr_t)&args[argc_count], &kargs_ptr[argc_count], sizeof(userptr_t));
@@ -449,9 +441,8 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 			stackptr, entrypoint);
 
 	/* enter_new_process does not return. */
-	/*
 	panic("enter_new_process returned\n");
-	return EINVAL;*/
+	return EINVAL;
 
 	return 0;
 }
