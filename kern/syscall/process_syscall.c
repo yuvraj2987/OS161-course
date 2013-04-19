@@ -25,6 +25,7 @@
 #include <kern/fcntl.h>
 #include <vfs.h>
 
+
 /*Process table init and release called only once main->boot*/
 void pid_table_init(void)
 {
@@ -381,13 +382,35 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	if(kargc > MAX_ARGS_NUMS)
 		return E2BIG;
 	//copy argument string
+	size_t ptr_size = sizeof(userptr_t);
 	char* kargv[kargc];
+	char* kargv_aligned[kargc];
+	size_t aligned_len_arr[kargc];
 	for(int i=0; i<kargc; i++)
 	{
 		size_t len;
 		//release it at the end
 		kargv[i] = (char *) kmalloc(NAME_MAX);
 		err = copyinstr(kargs_ptr[i], kargv[i], NAME_MAX, &len);
+		if(err)
+			return err;
+		//len includes the null terminator
+		size_t not_align = (len%ptr_size);
+		size_t pad_len = 0;
+		if(not_align)
+		{
+			pad_len = ptr_size - (len%ptr_size);
+		}
+		size_t aligned_len = len+pad_len;
+		kargv_aligned[i] = (char *) kmalloc(aligned_len);
+		//memset(kargv_aligned, 0, aligned_len);
+		//Init to null
+		/*for(unsigned int ch=0; ch<aligned_len; ch++)
+		{
+			kargv_aligned[ch] = 0;
+		}*/
+		strcpy(kargv_aligned[i], kargv[i]);
+		aligned_len_arr[i] = aligned_len;
 	}
 
 
@@ -442,16 +465,19 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	 * **/
 	//kargc = argc_count -1
 	//for kargc = 1 arg_size = 8 for 0th argument and for null
-	size_t arg_size = (argc_count*4);//user
-	for(int i =0; i<=kargc; i++)
+	size_t arg_size = (argc_count*ptr_size);//user
+	for(int i =0; i<kargc; i++)
 	{
-		size_t str_len = strlen(kargv[i])+1;
-		size_t pad_len = str_len%4;//correct
+		//size_t str_len = strlen(kargv[i])+1;
+		//size_t pad_len = str_len%4;//correct
 		//arg_size 	  += str_len+pad_len+1;
-		arg_size 	  += str_len+pad_len;
+		arg_size += aligned_len_arr[i];
+
 	}
 
-	char *buffer[4*argc_count];
+	//char *buffer[4*argc_count];
+	//userptr_t buffer[ptr_size*argc_count];
+	userptr_t buffer[argc_count];
 	/*
 	for(int i=0; i<4*argc_count; i++)
 	{
@@ -460,18 +486,21 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	*/
 
 	vaddr_t buf_base_addrs = stackptr - (vaddr_t)arg_size;
-	vaddr_t buf_str_addrs  = buf_base_addrs + 4*argc_count;
+	vaddr_t buf_str_addrs  = buf_base_addrs + ptr_size*argc_count;
 	//vaddr_t buf_str_addrs  = buf_base_addrs + 4*argc_count+1;
 	//vaddr_t buf_ptr_addrs  = buf_base_addrs;
 	for(int i =0; i<kargc; i++)
 	{
+		/*
 		buffer[i*4] = (char *)buf_str_addrs;
 		size_t str_len = strlen(kargv[i])+1;
 		size_t pad_len = str_len%4;//coorrect
 		//buf_str_addrs += str_len+pad_len+1;
 		buf_str_addrs += str_len+pad_len;
+		*/
+		buffer[i] = (userptr_t)buf_str_addrs;
+		buf_str_addrs += aligned_len_arr[i];
 	}
-
 
 	buffer[kargc] = NULL;
 	//copy only char pointers first
@@ -480,21 +509,29 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 		return err;
 
 	//vaddr_t stack_str_addrs  = buf_base_addrs + 4*argc_count+1;
-	vaddr_t stack_str_addrs  = buf_base_addrs + 4*argc_count;
-	for(int i =0; i<=kargc; i++)
+	vaddr_t stack_str_addrs  = buf_base_addrs + ptr_size*argc_count;
+	for(int i =0; i<kargc; i++)
 	{
+		/*
 		size_t str_len = strlen(kargv[i])+1;
 		size_t pad_len = str_len%4;
 		size_t actual;
 		err = copyoutstr(kargv[i], (userptr_t)stack_str_addrs, str_len, &actual);
 		//stack_str_addrs +=str_len+pad_len+1;
 		stack_str_addrs +=str_len+pad_len;
+		*/
+		size_t actual;
+		err = copyoutstr(kargv_aligned[i], (userptr_t)stack_str_addrs, aligned_len_arr[i], &actual);
+		if(err)
+			return err;
+		stack_str_addrs +=aligned_len_arr[i];
 	}
 
 	//release kargv
-	for(int i =0; i<=kargc; i++)
+	for(int i =0; i<kargc; i++)
 	{
 		kfree(kargv[i]);
+		kfree(kargv_aligned[i]);
 	}
 	/*
 	 * Copied from runprogram steps
