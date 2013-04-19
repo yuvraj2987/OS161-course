@@ -330,7 +330,7 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	/*Copy Progname to kernel stack*/
 	char k_progname[PATH_MAX];
 	size_t progname_actual_len;
-	err = copyinstr((userptr_t)progname, k_progname, PATH_MAX, &progname_actual_len);
+	err = copyinstr((userptr_t)progname, k_progname, NAME_MAX, &progname_actual_len);
 	if(err)
 		return err;
 
@@ -356,12 +356,13 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	if(kargc > MAX_ARGS_NUMS)
 		return E2BIG;
 	//copy argument string
-	char* kargv[kargc];
-	for(int i=0; i<kargc-1; i++)
+	char* kargv[kargc-1];
+	for(int i=0; i<=kargc-1; i++)
 	{
 		size_t len;
 		//release it at the end
-		kargv[i] = (char *) kmalloc(sizeof(char *));
+		//kargv[i] = (char *) kmalloc(sizeof(char *));
+		kargv[i] = (char *) kmalloc(NAME_MAX);
 		err = copyinstr(kargs_ptr[i], kargv[i], NAME_MAX, &len);
 	}
 
@@ -416,36 +417,48 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	 * create a kernel buffer with args strings and pointers
 	 * **/
 	size_t buffer_size = (kargc*4);
-	for(int i =0; i<kargc-1; i++)
+	for(int i =0; i<=kargc-1; i++)
 	{
-		size_t str_len = strlen(kargv[i]);
-		buffer_size += str_len+1;
+		size_t str_len = strlen(kargv[i])+1;
+		size_t pad_len = str_len%4;
+		buffer_size += str_len+pad_len;
 	}
-	char *buffer[buffer_size];
-	for(unsigned int i=0; i<buffer_size; i++)
+
+	char *buffer[4*kargc];
+	for(int i=0; i<4*kargc; i++)
 	{
 		buffer[i] = 0;
 	}
-	int str_ptr = kargc*4;
-	for(int i=0; i<kargc-1; i++)
-	{
-		strcpy(buffer[str_ptr], kargv[i]);
-		buffer[i*4] = buffer[str_ptr];
-		size_t str_len = strlen(kargv[i]);
-		str_ptr += str_len+1;
-	}
+
+
 	vaddr_t buf_base_addrs = stackptr - (vaddr_t)buffer_size;
 	vaddr_t buf_str_addrs  = buf_base_addrs + 4*kargc;
-	for(int i =0; i<kargc-1; i++)
+
+	for(int i =0; i<=kargc-1; i++)
 	{
 		buffer[i*4] = (char *)buf_str_addrs;
-		size_t str_len = strlen(buffer[i*4]);
-		buf_str_addrs += str_len+1;
+		size_t str_len = strlen(kargv[i])+1;
+		size_t pad_len = str_len%4;
+		buf_str_addrs += str_len+pad_len;
 	}
 
-	err = copyout(buffer, (userptr_t)buf_base_addrs, buffer_size);
+	buffer[kargc] = NULL;
+	//copy only char pointers first
+	err = copyout(buffer, (userptr_t)buf_base_addrs, 4*kargc);
+	if(err)
+		return err;
+	vaddr_t stack_str_addrs  = buf_base_addrs + 4*kargc;
+	for(int i =0; i<=kargc-1; i++)
+	{
+		size_t str_len = strlen(kargv[i])+1;
+		size_t pad_len = str_len%4;
+		size_t actual;
+		err = copyoutstr(kargv[i], (userptr_t)stack_str_addrs, str_len, &actual);
+		stack_str_addrs +=str_len+pad_len;
+	}
+
 	//release kargv
-	for(int i =0; i<kargc-1; i++)
+	for(int i =0; i<=kargc-1; i++)
 	{
 		kfree(kargv[i]);
 	}
@@ -456,7 +469,7 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 	/* Warp to user mode. */
 
 	enter_new_process(kargc /*argc*/, (userptr_t)buf_base_addrs /*userspace addr of argv*/,
-			stackptr, entrypoint);
+			buf_base_addrs-4, entrypoint);
 
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");
