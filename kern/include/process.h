@@ -10,6 +10,7 @@
 #include <types.h>
 #include <limits.h>
 #include <synch.h>
+#include <thread.h>
 
 #define MAX_RUNNING_PROCS	256
 #define MAX_ARGS_NUMS		 32
@@ -32,6 +33,7 @@ struct child_process_para
 	struct trapframe *tf_child;
 	struct semaphore *child_status_sem;
 	struct addrspace *child_addrspace;
+	struct fileDescriptorNode** fd_ptr;
 };
 
 //Global process table
@@ -52,4 +54,6 @@ void child_fork_entry(void *data1, unsigned long data2);
 void update_childs_parent(void);
 /*Init first pid_table entry*/
 int create_runprog_pid_table_entry(void);
+
+void copy_file_table(struct fileDescriptorNode *src, struct fileDescriptorNode *dst);
 #endif /* PROCESS_H_ */

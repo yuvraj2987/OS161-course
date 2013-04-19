@@ -116,6 +116,16 @@ int create_runprog_pid_table_entry(void)
 	return 0;
 }
 
+void copy_file_table(struct fileDescriptorNode *src, struct fileDescriptorNode *dst)
+{
+	//copy all MAX_FILE_NUMBER
+	for(int i =0; i<MAX_NUMBER_OF_FILES; i++)
+	{
+		dst[i] = src[i];
+	}
+}
+
+
 
 /*
  * Fork System call
@@ -139,6 +149,8 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		kfree(child_para->tf_child);
 		return err;
 	}
+	//set ptr to curthead->fileDescriptor array
+	child_para->fd_ptr = curthread->fileDescriptor;
 
 	//child thread
 	struct thread *child_thread = NULL;
@@ -195,6 +207,18 @@ void child_fork_entry(void *parent_param, unsigned long data2)
 {
 	(void)data2;//unused
 	struct child_process_para *param = (struct child_process_para*)parent_param;
+	//copy parent process file table
+	for(int i=0; i < MAX_NUMBER_OF_FILES; i++)
+	{
+		curthread->fileDescriptor[i] = *param->fd_ptr++;
+		//Increment ref count
+		if(curthread->fileDescriptor[i] != NULL)
+		{
+			lock_acquire(curthread->fileDescriptor[i]->fDNLock);
+			curthread->fileDescriptor[i]->refCount+=1;
+			lock_release(curthread->fileDescriptor[i]->fDNLock);
+		}
+	}
 	//copy tf on stack and addrspace
 	struct trapframe tf_child_stack;
 	memcpy(&tf_child_stack, param->tf_child, sizeof(struct trapframe));
@@ -276,6 +300,7 @@ int sys_exit(int exit_code)
 	pid_table[curthread->t_pid]->exited = 1;//true
 	//should mark the curthread as zombie
 	V(pid_table[curthread->t_pid]->exit_sem);
+	//In thread exit- file_table null and sys_close on valid descriptor
 	thread_exit();
 	return 0;
 }
