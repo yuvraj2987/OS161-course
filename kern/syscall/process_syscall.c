@@ -539,7 +539,7 @@ int sys_exev(const_userptr_t  progname, userptr_t *args)
 
 	/* Warp to user mode. */
 
-	enter_new_process(kargc-1 /*argc*/, (userptr_t)buf_base_addrs /*userspace addr of argv*/,
+	enter_new_process(kargc /*argc*/, (userptr_t)buf_base_addrs /*userspace addr of argv*/,
 			buf_base_addrs-16/*Margin of 16*/, entrypoint);
 
 	/* enter_new_process does not return. */
