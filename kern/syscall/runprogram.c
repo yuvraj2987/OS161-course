@@ -59,6 +59,12 @@ runprogram(char *progname, char **args)
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
+	size_t progname_len = strlen(progname);
+
+	if(progname_len == 0)
+			return EINVAL;
+	if(progname[progname_len]== '/')
+			return EISDIR;
 
 	/* Open the file. */
 

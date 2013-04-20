@@ -375,8 +375,15 @@ int sys_execv(const_userptr_t  progname, userptr_t *args)
 	size_t progname_actual_len;
 	err = copyinstr((userptr_t)progname, k_progname, NAME_MAX, &progname_actual_len);
 	if(err)
+	{
 		return err;
+	}
 
+	//Incase of null
+	if(progname_actual_len <= 1)
+		return EINVAL;
+	if(k_progname[progname_actual_len-1] == '/')
+		return EISDIR;
 	/*
 	 * Copy args string pointer list
 	 *
