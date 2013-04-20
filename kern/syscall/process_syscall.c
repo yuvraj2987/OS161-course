@@ -211,7 +211,8 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	//wait for child to complete tf and addrspace copying
 	P(child_para->child_status_sem);
 
-	*retval = child_thread->t_pid;
+	//*retval = child_thread->t_pid;
+	*retval = child_pid;
 	//on success
 	sem_destroy(child_para->child_status_sem);
 	kfree(child_para->tf_child);
@@ -270,11 +271,15 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	{
 		if(status_ptr == NULL)
 			return EFAULT;
+		if(status_ptr%4)
+			return EFAULT;
+
 		if(ret == NULL)
 			return EFAULT;
 		int kern_status;
 
 		int err = copyin(status_ptr, &kern_status, sizeof(int));
+
 
 		//review erro checks again
 		if(err)
