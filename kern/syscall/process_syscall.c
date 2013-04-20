@@ -365,7 +365,7 @@ int tmp_sys_write(int fd, userptr_t buf, size_t nbytes)
 /*
 int sys_exev(char *progname, char **args)
  */
-int sys_exev(const_userptr_t  progname, userptr_t *args)
+int sys_execv(const_userptr_t  progname, userptr_t *args)
 {
 	if(progname == NULL || args==NULL)
 		return EFAULT;
