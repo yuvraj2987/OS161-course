@@ -267,11 +267,14 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	(void)ret;*/
 
 	//error checking
+	if((pid < 1) || (pid >= MAX_RUNNING_PROCS) )
+		return EINVAL;
+
 	if(pid != 1)
 	{
 		if(status_ptr == NULL)
 			return EFAULT;
-		if(status_ptr%4)
+		if((unsigned long)status_ptr & (sizeof(userptr_t)-1))
 			return EFAULT;
 
 		if(ret == NULL)
