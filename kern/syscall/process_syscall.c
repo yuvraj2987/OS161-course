@@ -138,16 +138,32 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 	int err;
 	struct child_process_para *child_para = (struct child_process_para *)
 																	kmalloc(sizeof(struct child_process_para));
+	if(child_para == NULL)
+		return ENOMEM;
 	//Copy tf and addrspace to kernel heap and semaphore to wait
 	child_para->tf_child = (struct trapframe *)
 																	kmalloc(sizeof(struct trapframe));
+	if(child_para->tf_child == NULL)
+	{
+		kfree(child_para);
+		return ENOMEM;
+	}
+
 	child_para->child_addrspace = NULL;
 	child_para->child_status_sem =  sem_create("Child_status", 0);
+	if(child_para->child_status_sem == NULL)
+	{
+		kfree(child_para->tf_child);
+		kfree(child_para);
+		return ENOMEM;
+	}
 	memcpy(child_para->tf_child, tf_parent, sizeof(struct trapframe));
 	err = as_copy(curthread->t_addrspace, &child_para->child_addrspace);
 	if(err != 0)
 	{
 		kfree(child_para->tf_child);
+		sem_destroy(child_para->child_status_sem);
+		kfree(child_para);
 		return err;
 	}
 	//set ptr to curthead->fileDescriptor array
