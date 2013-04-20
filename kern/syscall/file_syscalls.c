@@ -126,6 +126,8 @@ int sys_initialize_fd()
  * change offset when flag is APPEND*/
 int sys_open(const_userptr_t filePath, int flag, int *retval)
 {
+	*retval = -1;
+
 	sys_initialize_fd();
 	mode_t mode = 0664;
 	//copyinout
@@ -136,9 +138,15 @@ int sys_open(const_userptr_t filePath, int flag, int *retval)
 	int err = copyinstr(filePath, (char *)filePathPointer, (size_t)PATH_MAX, &filePathGot);
 	if (err != 0)
 	{
-		//To Do: Check if some cleanup is required
 		return err;
+	}
 
+	//is valid flag
+	{
+		int flag1 = flag;
+		flag1 = flag1>>7;
+		if(flag1>0)
+			return EINVAL;
 	}
 
 	struct lock * sys_initialize_lock = lock_create("sys_initialize_lock");
@@ -173,6 +181,7 @@ int sys_open(const_userptr_t filePath, int flag, int *retval)
 	else
 	{
 		//kfree(vn);
+		return err;
 	}
 
 	*retval = count;
@@ -182,11 +191,12 @@ int sys_open(const_userptr_t filePath, int flag, int *retval)
 
 int sys_close(int fd, int *retval)
 {
-	if((fd<0 || fd>=MAX_NUMBER_OF_FILES) | (curthread->fileDescriptor[fd]==NULL))
-	{
-		*retval = -1;
+	*retval = -1;
+	if(fd<0 || fd>=MAX_NUMBER_OF_FILES)
 		return EBADF;
-	}
+
+	if(curthread->fileDescriptor[fd]==NULL)
+		return EBADF;
 
 	lock_acquire(curthread->fileDescriptor[fd]->fDNLock);
 	if(curthread->fileDescriptor[fd]->refCount>0)
@@ -214,8 +224,33 @@ int sys_read(int fd, const_userptr_t buffer, size_t bufferLen, int *retval)
 	sys_initialize_fd();
 
 	*retval = -1;
-	if((fd<0 || fd>=MAX_NUMBER_OF_FILES) | (curthread->fileDescriptor[fd]==NULL))
+	if(fd<0 || fd>=MAX_NUMBER_OF_FILES )
 		return EBADF;
+
+	if(curthread->fileDescriptor[fd]==NULL)
+		return EBADF;
+
+	if(buffer==NULL)
+		return EFAULT;
+
+	if(bufferLen<=0)
+		return EINVAL;
+
+	int how = curthread->fileDescriptor[fd]->flag & O_ACCMODE;
+
+	switch (how)
+	{
+		case O_RDWR:
+	    case O_RDONLY:
+	    	break;
+
+	    case O_WRONLY:
+	    	return EBADF;
+
+	    default:
+	    	return EINVAL;
+	}
+
 
 	int err = -1;
 	//if(curthread->fileDescriptor[fd]->flag==O_RDONLY || curthread->fileDescriptor[fd]->flag==O_RDWR)
@@ -261,8 +296,33 @@ int sys_write(int fd, const_userptr_t buffer, size_t bufferLen, int *retval)
 	sys_initialize_fd();
 
 	*retval = -1;
-	if((fd<0 || fd>=MAX_NUMBER_OF_FILES) | (curthread->fileDescriptor[fd]==NULL))
+	if(fd<0 || fd>=MAX_NUMBER_OF_FILES )
 		return EBADF;
+
+	if (curthread->fileDescriptor[fd]==NULL)
+			return EBADF;
+
+	if(buffer==NULL)
+		return EFAULT;
+
+	if(bufferLen<=0)
+		return EINVAL;
+
+	int how = curthread->fileDescriptor[fd]->flag & O_ACCMODE;
+
+	switch (how)
+	{
+		case O_RDWR:
+		case O_WRONLY:
+	    	break;
+
+	    case O_RDONLY:
+		   	return EBADF;
+
+		default:
+		  	return EINVAL;
+	}
+
 
 	int err = -1;
 	//if(curthread->fileDescriptor[fd]->flag==O_WRONLY || curthread->fileDescriptor[fd]->flag==O_RDWR)
@@ -308,7 +368,10 @@ int sys_dup2(int oldfd, int newfd, int *retval)
 	}
 
 	if(oldfd == newfd)
+	{
+		*retval = 0;
 		return 0;
+	}
 
 	if(curthread->fileDescriptor[newfd]!=NULL)
 	{
@@ -328,7 +391,11 @@ int sys_dup2(int oldfd, int newfd, int *retval)
 
 int sys_lseek(int fd, off_t location, int whence, int *retval, int *retval_v1)
 {
-	if(fd<0 || fd>=MAX_NUMBER_OF_FILES || curthread->fileDescriptor[fd]==NULL)
+	*retval =-1;
+	if(fd<0 || fd>=MAX_NUMBER_OF_FILES)
+		return EBADF;
+
+	if(curthread->fileDescriptor[fd]==NULL)
 		return EBADF;
 
 	sys_initialize_fd();
@@ -397,6 +464,11 @@ int sys_lseek(int fd, off_t location, int whence, int *retval, int *retval_v1)
 
 int sys_chdir(const_userptr_t newPath, int * retval)
 {
+	*retval = -1;
+
+	if(newPath==NULL)
+		return EFAULT;
+
 	int err = -1;
 	size_t newPathLen = strlen((char *)newPath);
 	char * newPathPointer = (char *)kmalloc(newPathLen*(sizeof(char)));
