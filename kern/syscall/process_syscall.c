@@ -186,7 +186,8 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		kfree(child_para->tf_child);
 		kfree(child_para->child_addrspace);
 		kfree(child_para);//free
-		release_pid(child_pid);
+		/*pid is not yet setup*/
+		//release_pid(child_pid);
 		return err;
 	}
 	child_thread->t_pid = child_pid;
