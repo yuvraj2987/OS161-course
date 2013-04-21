@@ -269,9 +269,21 @@ int sys_waitpid(pid_t pid, userptr_t status_ptr, int options, int *ret)
 	//error checking
 	if((pid < 1) || (pid >= MAX_RUNNING_PROCS) )
 		return EINVAL;
+	/*wiating on self*/
+	if(pid == curthread->t_pid)
+		return EAGAIN;
+	/*wait on parent - not for kernel thread i.e curthread->t_pid =0*/
+	if(curthread->t_pid != 0)
+	{
+		if(pid_table[curthread->t_pid]->parent_pid == pid)
+			return EAGAIN;
+	}
+
 
 	if(pid != 1)
 	{
+
+
 		if(status_ptr == NULL)
 			return EFAULT;
 		if((unsigned long)status_ptr & (sizeof(userptr_t)-1))
