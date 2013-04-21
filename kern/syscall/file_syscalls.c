@@ -130,16 +130,21 @@ int sys_open(const_userptr_t filePath, int flag, int *retval)
 
 	sys_initialize_fd();
 	mode_t mode = 0664;
-	//copyinout
+
+	if(filePath==NULL)
+		return EFAULT;
+
+	vaddr_t filePathAddress = (vaddr_t)filePath;
+	if(filePathAddress==0x40000000 || filePathAddress>=USERSPACETOP)
+		return EFAULT;
+
 	size_t filePathLen = strlen((char *)filePath);
 	char * filePathPointer = (char *)kmalloc(filePathLen*(sizeof(char)));
 	size_t filePathGot;
-	//int copyinstr(const_userptr_t usersrc, char *dest, size_t len, size_t *got);
 	int err = copyinstr(filePath, (char *)filePathPointer, (size_t)PATH_MAX, &filePathGot);
+
 	if (err != 0)
-	{
 		return err;
-	}
 
 	//is valid flag
 	{
@@ -221,9 +226,9 @@ int sys_close(int fd, int *retval)
 
 int sys_read(int fd, const_userptr_t buffer, size_t bufferLen, int *retval)
 {
+	*retval = -1;
 	sys_initialize_fd();
 
-	*retval = -1;
 	if(fd<0 || fd>=MAX_NUMBER_OF_FILES )
 		return EBADF;
 
@@ -236,8 +241,14 @@ int sys_read(int fd, const_userptr_t buffer, size_t bufferLen, int *retval)
 	if(bufferLen<=0)
 		return EINVAL;
 
-	int how = curthread->fileDescriptor[fd]->flag & O_ACCMODE;
+	size_t stoplen;
+	int err1 = copycheck(buffer, bufferLen, &stoplen);
+	if(err1!=0)
+		return EFAULT;
 
+	bufferLen = stoplen;
+
+	int how = curthread->fileDescriptor[fd]->flag & O_ACCMODE;
 	switch (how)
 	{
 		case O_RDWR:
@@ -308,6 +319,13 @@ int sys_write(int fd, const_userptr_t buffer, size_t bufferLen, int *retval)
 	if(bufferLen<=0)
 		return EINVAL;
 
+	size_t stoplen;
+	int err1 = copycheck(buffer, bufferLen, &stoplen);
+	if(err1!=0)
+		return EFAULT;
+
+	bufferLen = stoplen;
+
 	int how = curthread->fileDescriptor[fd]->flag & O_ACCMODE;
 
 	switch (how)
@@ -369,7 +387,7 @@ int sys_dup2(int oldfd, int newfd, int *retval)
 
 	if(oldfd == newfd)
 	{
-		*retval = 0;
+		*retval = newfd;
 		return 0;
 	}
 
@@ -385,7 +403,7 @@ int sys_dup2(int oldfd, int newfd, int *retval)
 	curthread->fileDescriptor[newfd] = curthread->fileDescriptor[oldfd];
 	lock_release(curthread->fileDescriptor[oldfd]->fDNLock);
 
-	*retval = 0;
+	*retval = newfd;
 	return 0;
 }
 
@@ -469,6 +487,10 @@ int sys_chdir(const_userptr_t newPath, int * retval)
 	if(newPath==NULL)
 		return EFAULT;
 
+	vaddr_t filePathAddress = (vaddr_t)newPath;
+	if(filePathAddress==0x40000000 || filePathAddress>=USERSPACETOP)
+		return EFAULT;
+
 	int err = -1;
 	size_t newPathLen = strlen((char *)newPath);
 	char * newPathPointer = (char *)kmalloc(newPathLen*(sizeof(char)));
@@ -490,6 +512,12 @@ int sys_chdir(const_userptr_t newPath, int * retval)
 int sys__getcwd(const_userptr_t buffer, int bufferLen, int *retval)
 {
 	*retval = -1;
+
+	size_t stoplen;
+	int err1 = copycheck(buffer, bufferLen, &stoplen);
+	if(err1!=0 || stoplen!=bufferLen)
+		return EFAULT;
+
 	struct iovec iovec__getcwd;
 	struct uio uio__getcwd;
 	my_uio_kinit(&iovec__getcwd, &uio__getcwd, (void *)buffer, bufferLen,
