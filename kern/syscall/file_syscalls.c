@@ -378,7 +378,7 @@ int sys_dup2(int oldfd, int newfd, int *retval)
 	}
 
 	if(newfd>=MAX_NUMBER_OF_FILES)
-		return EMFILE;
+		return EBADF;
 
 	if(curthread->fileDescriptor[oldfd]==NULL)
 	{
