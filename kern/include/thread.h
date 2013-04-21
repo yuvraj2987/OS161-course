@@ -57,6 +57,8 @@ struct vnode;
 #define STACK_MASK  (~(vaddr_t)(STACK_SIZE-1))
 
 /* Macro to test if two addresses are on the same kernel stack */
+/*probable bug in os161 code*/
+//#define SAME_STACK(p1, p2)     (((p1) & STACK_MASK) == ((p2) & STACK_MASK))
 #define SAME_STACK(p1, p2)     (((p1) & STACK_MASK) == ((p2) & STACK_MASK))
 
 
@@ -115,10 +117,14 @@ struct thread {
 	struct vnode *t_cwd;		/* current working directory */
 
 	/* add more here as needed */
+
+	pid_t t_pid;				/*Process==Thread; Thread's process id*/
+
 	/* ASST2*/
 	/* We just need to initialize it in thread_create
 	 * but need not to destroy in thread_deatroy or in thread_exit as it is array*/
 	struct fileDescriptorNode *fileDescriptor[MAX_NUMBER_OF_FILES];
+
 };
 
 /* Call once during system startup to allocate data structures. */

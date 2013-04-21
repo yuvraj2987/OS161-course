@@ -47,6 +47,10 @@
 #include <addrspace.h>
 #include <mainbus.h>
 #include <vnode.h>
+#include <syscall.h>
+
+//custom
+#include <process.h>
 
 #include "opt-synchprobs.h"
 #include "opt-defaultscheduler.h"
@@ -152,12 +156,14 @@ thread_create(const char *name)
 	thread->t_cwd = NULL;
 
 	/* If you add to struct thread, be sure to initialize here */
-	/*ASST2*/
+	/*ASST2 - File Table entries - destoryed in thread_exit()*/
 	int count = 0;
 	for (count = 0; count<MAX_NUMBER_OF_FILES; count++)
 	{
 		thread->fileDescriptor[count] = NULL;
 	}
+
+
 
 
 
@@ -502,7 +508,11 @@ thread_fork(const char *name,
 		thread_destroy(newthread);
 		return ENOMEM;
 	}
+
+
 	thread_checkstack_init(newthread);
+
+
 
 	/*
 	 * Now we clone various fields from the parent thread.
@@ -824,8 +834,20 @@ thread_exit(void)
 	/* Check the stack guard band. */
 	thread_checkstack(cur);
 
+	/*Close opend vnode for file table*/
+	for(int i =0; i < MAX_NUMBER_OF_FILES; i++)
+	{
+		int retval;
+		if(cur->fileDescriptor[i] != NULL)
+		{
+			sys_close(i, &retval);
+		}
+	}
+
 	/* Interrupts off on this processor */
-        splhigh();
+    splhigh();
+
+
 	thread_switch(S_ZOMBIE, NULL);
 	panic("The zombie walks!\n");
 }

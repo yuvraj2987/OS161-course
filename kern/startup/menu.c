@@ -39,6 +39,7 @@
 #include <vfs.h>
 #include <sfs.h>
 #include <syscall.h>
+#include <process.h>
 #include <test.h>
 #include "opt-synchprobs.h"
 #include "opt-sfs.h"
@@ -91,16 +92,19 @@ cmd_progthread(void *ptr, unsigned long nargs)
 
 	KASSERT(nargs >= 1);
 
+	/*
 	if (nargs > 2) {
 		kprintf("Warning: argument passing from menu not supported\n");
 	}
-
+	*/
 	/* Hope we fit. */
 	KASSERT(strlen(args[0]) < sizeof(progname));
 
 	strcpy(progname, args[0]);
 
-	result = runprogram(progname);
+	//result = runprogram(progname);
+	args[nargs] = NULL;
+	result = runprogram(progname, args);
 	if (result) {
 		kprintf("Running program %s failed: %s\n", args[0],
 			strerror(result));
@@ -141,7 +145,23 @@ common_prog(int nargs, char **args)
 		kprintf("thread_fork failed: %s\n", strerror(result));
 		return result;
 	}
+	//wait for runprogram thread to exit what to do with status and return
+	//create pid_table entry
+	result = create_runprog_pid_table_entry();
+	if(result)
+		return result;
 
+	int status  = 0;
+	int ret_val = 0;
+	//wait for runprogram to init pid_table_entry
+	/*
+	do
+	{
+		//nothing
+		;
+	}while(sys_waitpid(1, (userptr_t)&status, 0, &ret_val) == ESRCH);
+	*/
+	sys_waitpid(1, (userptr_t)&status, 0, &ret_val);
 	return 0;
 }
 

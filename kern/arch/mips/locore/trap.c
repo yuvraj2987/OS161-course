@@ -114,7 +114,8 @@ kill_curthread(vaddr_t epc, unsigned code, vaddr_t vaddr)
 
 	kprintf("Fatal user mode trap %u sig %d (%s, epc 0x%x, vaddr 0x%x)\n",
 		code, sig, trapcodenames[code], epc, vaddr);
-	panic("I don't know how to handle this\n");
+	sys_exit(curthread->t_pid);
+	//panic("I don't know how to handle this\n");
 }
 
 /*
@@ -395,6 +396,8 @@ mips_usermode(struct trapframe *tf)
 	 * (Exercise: why?)
 	 */
 	KASSERT(SAME_STACK(cpustacks[curcpu->c_number]-1, (vaddr_t)tf));
+
+
 
 	/*
 	 * This actually does it. See exception.S.

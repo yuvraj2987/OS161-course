@@ -72,4 +72,13 @@ int sys__getcwd(const_userptr_t buffer, int bufferLen, int *retval);
 void my_uio_kinit(struct iovec *iov, struct uio *u,
 		void *kbuf, size_t len, off_t pos, enum uio_rw rw);
 
+//Process system calls
+int sys_fork(struct trapframe *tf, int *ret);
+int sys_waitpid(pid_t pid, userptr_t status_ptr, int options ,int *ret);
+int sys_exit(int exit_code);
+int sys_getpid(int *ret);
+//int sys_execv(char *progname, char **args);
+int sys_execv(const_userptr_t progname, userptr_t *args);
+int tmp_sys_write(int fd, userptr_t buf, size_t nbytes);
+
 #endif /* _SYSCALL_H_ */

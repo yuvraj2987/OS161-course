@@ -406,7 +406,12 @@ struct rwlock* rwlock_create(const char *name)
 
 void rwlock_destroy(struct rwlock *lock)
 {
-	(void)lock;
+	KASSERT(lock != NULL);
+	spinlock_cleanup(&lock->rwlock_lock);
+	wchan_destroy(lock->rwlock_wchan);
+	kfree(lock->rwlock_name);
+	kfree(lock);
+
 }
 
 void rwlock_acquire_read(struct rwlock *lock)

@@ -103,71 +103,109 @@ syscall(struct trapframe *tf)
 	int whence = -1;
 
 	switch (callno) {
-	    case SYS_reboot:
+	case SYS_reboot:
 		err = sys_reboot(tf->tf_a0);
 		break;
 
-	    case SYS___time:
+	case SYS___time:
 		err = sys___time((userptr_t)tf->tf_a0,
-				 (userptr_t)tf->tf_a1);
+				(userptr_t)tf->tf_a1);
 		break;
 
+
 		/* Add stuff here */
+		/*#define SYS_execv        2
+		  #define SYS__exit        3
+		  #define SYS_waitpid      4
+		  #define SYS_getpid       5*/
+	case SYS_fork:
+		err = sys_fork(tf, &retval);
+		break;
+	case SYS_waitpid:
+		/*pid_t
+			waitpid(pid_t pid, int *status, int options); */
+		err = sys_waitpid((pid_t)tf->tf_a0,
+				(userptr_t)tf->tf_a1, (int)tf->tf_a2, &retval);
+		break;
+	case SYS__exit:
+		/*void
+				_exit(int exitcode); */
+		err = sys_exit((int) tf->tf_a0);
+		break;
+	case SYS_getpid:
+		/*pid_t
+				getpid(void); */
+		err = sys_getpid(&retval);
+		break;
+	/*
+	case SYS_write:
+		err = tmp_sys_write((int)tf->tf_a0, (userptr_t)tf->tf_a1, (size_t)tf->tf_a2);
+		break;
+		*/
+	case SYS_execv:
+		/*int
+	    	execv(const char *program, char **args);
+	    	on sucess - no return*/
+		err = sys_execv((const_userptr_t)tf->tf_a0, (userptr_t *)tf->tf_a1);
+		break;
+
+
 		/* ASST2*/
-	    case SYS_open:
-	    	err = sys_open((const_userptr_t)tf->tf_a0, tf->tf_a1, &retval);
-	    break;
+	case SYS_open:
+		err = sys_open((const_userptr_t)tf->tf_a0, tf->tf_a1, &retval);
+		break;
 
-	    case SYS_close:
-	    	err = sys_close(tf->tf_a0, &retval);
-    	break;
+	case SYS_close:
+		err = sys_close(tf->tf_a0, &retval);
+		break;
 
-	    case SYS_read:
-	    	err = sys_read(tf->tf_a0, (const_userptr_t)tf->tf_a1, tf->tf_a2, &retval);
-	    break;
+	case SYS_read:
+		err = sys_read(tf->tf_a0, (const_userptr_t)tf->tf_a1, tf->tf_a2, &retval);
+		break;
 
-	    case SYS_write:
-	    	err = sys_write(tf->tf_a0, (const_userptr_t)tf->tf_a1, tf->tf_a2, &retval);
-	    break;
+	case SYS_write:
+		err = sys_write(tf->tf_a0, (const_userptr_t)tf->tf_a1, tf->tf_a2, &retval);
+		break;
 
-	    case SYS_dup2:
-	    	err = sys_dup2(tf->tf_a0, tf->tf_a1, &retval);
-	    break;
+	case SYS_dup2:
+		err = sys_dup2(tf->tf_a0, tf->tf_a1, &retval);
+		break;
 
-	    case SYS_lseek:
+	case SYS_lseek:
 
-	    	err = copyin((const_userptr_t)(tf->tf_sp+16), &whence, sizeof(int));
-    	    if (err!=0)
-    	    	break;
+		err = copyin((const_userptr_t)(tf->tf_sp+16), &whence, sizeof(int));
+		if (err!=0)
+			break;
 
-    	    off_t location = 0;
+		off_t location = 0;
 
-    	    off_t location1 = 0;
-    	    location1 = location1 | tf->tf_a2;
-    	    location1 = location1<<32;
+		off_t location1 = 0;
+		location1 = location1 | tf->tf_a2;
+		location1 = location1<<32;
 
-    	    off_t location2 = 0;
-    	    location2 = location2 | tf->tf_a3;
+		off_t location2 = 0;
+		location2 = location2 | tf->tf_a3;
 
-    	    location = location1 | location2;
+		location = location1 | location2;
 
-	    	int32_t retval_v1;
-	    	err = sys_lseek(tf->tf_a0, location, whence, &retval, &retval_v1);
+		int32_t retval_v1;
+		err = sys_lseek(tf->tf_a0, location, whence, &retval, &retval_v1);
 
-	    	if (err==0)
-	    		tf->tf_v1 = retval_v1;
+		if (err==0)
+			tf->tf_v1 = retval_v1;
 
-	    break;
+		break;
 
-	    case SYS_chdir:
-	    	err = sys_chdir((const_userptr_t)tf->tf_a0, &retval);
-	    break;
+	case SYS_chdir:
+		err = sys_chdir((const_userptr_t)tf->tf_a0, &retval);
+		break;
 
-	    case SYS___getcwd:
-	    	err = sys__getcwd((const_userptr_t)tf->tf_a0, tf->tf_a1, &retval);
-	    break;
+	case SYS___getcwd:
+		err = sys__getcwd((const_userptr_t)tf->tf_a0, tf->tf_a1, &retval);
+		break;
 
-	    default:
+
+	default:
 		kprintf("Unknown syscall %d\n", callno);
 		err = ENOSYS;
 		break;
@@ -188,12 +226,12 @@ syscall(struct trapframe *tf)
 		tf->tf_v0 = retval;
 		tf->tf_a3 = 0;      /* signal no error */
 	}
-	
+
 	/*
 	 * Now, advance the program counter, to avoid restarting
 	 * the syscall over and over again.
 	 */
-	
+
 	tf->tf_epc += 4;
 
 	/* Make sure the syscall code didn't forget to lower spl */

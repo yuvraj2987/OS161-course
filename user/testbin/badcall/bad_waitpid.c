@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <err.h>
-
+#include <stdio.h>
 #include "config.h"
 #include "test.h"
 
@@ -56,6 +56,7 @@ wait_badstatus(void *ptr, const char *desc)
 	int rv, pid, x;
 
 	pid = fork();
+	//printf("pid returned value: %d\n", pid);
 	if (pid<0) {
 		warn("UH-OH: fork failed");
 		return;
