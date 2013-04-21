@@ -71,6 +71,7 @@ int sys_chdir(const_userptr_t newPath, int * retval);
 int sys__getcwd(const_userptr_t buffer, int bufferLen, int *retval);
 void my_uio_kinit(struct iovec *iov, struct uio *u,
 		void *kbuf, size_t len, off_t pos, enum uio_rw rw);
+int my_copycheck(const_userptr_t userptr, size_t len, size_t *stoplen);
 
 //Process system calls
 int sys_fork(struct trapframe *tf, int *ret);

@@ -242,7 +242,7 @@ int sys_read(int fd, const_userptr_t buffer, size_t bufferLen, int *retval)
 		return EINVAL;
 
 	size_t stoplen;
-	int err1 = copycheck(buffer, bufferLen, &stoplen);
+	int err1 = my_copycheck(buffer, bufferLen, &stoplen);
 	if(err1!=0)
 		return EFAULT;
 
@@ -320,7 +320,7 @@ int sys_write(int fd, const_userptr_t buffer, size_t bufferLen, int *retval)
 		return EINVAL;
 
 	size_t stoplen;
-	int err1 = copycheck(buffer, bufferLen, &stoplen);
+	int err1 = my_copycheck(buffer, bufferLen, &stoplen);
 	if(err1!=0)
 		return EFAULT;
 
@@ -514,8 +514,8 @@ int sys__getcwd(const_userptr_t buffer, int bufferLen, int *retval)
 	*retval = -1;
 
 	size_t stoplen;
-	int err1 = copycheck(buffer, bufferLen, &stoplen);
-	if(err1!=0 || stoplen!=bufferLen)
+	int err1 = my_copycheck(buffer, bufferLen, &stoplen);
+	if(err1!=0 || stoplen!=(size_t)bufferLen)
 		return EFAULT;
 
 	struct iovec iovec__getcwd;
@@ -560,4 +560,31 @@ void my_uio_kinit(struct iovec *iov, struct uio *u,
 	u->uio_segflg = UIO_USERSPACE;
 	u->uio_rw = rw;
 	u->uio_space = curthread->t_addrspace;
+}
+
+int my_copycheck(const_userptr_t userptr, size_t len, size_t *stoplen)
+{
+	vaddr_t bot, top;
+
+	*stoplen = len;
+
+	bot = (vaddr_t) userptr;
+	top = bot+len-1;
+
+	if (top < bot) {
+		/* addresses wrapped around */
+		return EFAULT;
+	}
+
+	if (bot >= USERSPACETOP) {
+		/* region is within the kernel */
+		return EFAULT;
+	}
+
+	if (top >= USERSPACETOP) {
+		/* region overlaps the kernel. adjust the max length. */
+		*stoplen = USERSPACETOP - bot;
+	}
+
+	return 0;
 }
