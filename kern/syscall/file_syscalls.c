@@ -144,14 +144,20 @@ int sys_open(const_userptr_t filePath, int flag, int *retval)
 	int err = copyinstr(filePath, (char *)filePathPointer, (size_t)PATH_MAX, &filePathGot);
 
 	if (err != 0)
+	{
+		kfree(filePathPointer);
 		return err;
+	}
 
 	//is valid flag
 	{
 		int flag1 = flag;
 		flag1 = flag1>>7;
 		if(flag1>0)
+		{
+			kfree(filePathPointer);
 			return EINVAL;
+		}
 	}
 
 	struct lock * sys_initialize_lock = lock_create("sys_initialize_lock");
@@ -180,16 +186,19 @@ int sys_open(const_userptr_t filePath, int flag, int *retval)
 		}
 		if(count==MAX_NUMBER_OF_FILES)
 		{
+			kfree(filePathPointer);
 			return EMFILE;
 		}
 	}
 	else
 	{
 		//kfree(vn);
+		kfree(filePathPointer);
 		return err;
 	}
 
 	*retval = count;
+	kfree(filePathPointer);
 	return err;
 }
 
@@ -497,15 +506,18 @@ int sys_chdir(const_userptr_t newPath, int * retval)
 	size_t newPathGot;
 	err = copyinstr(newPath, (char *)newPathPointer, (size_t)PATH_MAX, &newPathGot);
 	if (err!=0)
+	{
+		kfree(newPathPointer);
 		return err;
+	}
 
 	err = vfs_chdir(newPathPointer);
 
 	if(err==0)
 		*retval = 0;
 
-	//kfree(newPathPointer);
-	//newPathPointer = NULL;
+	kfree(newPathPointer);
+	newPathPointer = NULL;
 	return err;
 }
 
