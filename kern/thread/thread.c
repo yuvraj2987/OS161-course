@@ -157,6 +157,7 @@ thread_create(const char *name)
 
 	/* If you add to struct thread, be sure to initialize here */
 	/*ASST2 - File Table entries - destoryed in thread_exit()*/
+	thread->t_pid = 0;
 	int count = 0;
 	for (count = 0; count<MAX_NUMBER_OF_FILES; count++)
 	{
