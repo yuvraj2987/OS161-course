@@ -492,8 +492,8 @@ int sys_chdir(const_userptr_t newPath, int * retval)
 		return EFAULT;
 
 	int err = -1;
-	size_t newPathLen = strlen((char *)newPath);
-	char * newPathPointer = (char *)kmalloc(newPathLen*(sizeof(char)));
+	//size_t newPathLen = strlen((char *)newPath);
+	char * newPathPointer = (char *)kmalloc(PATH_MAX*(sizeof(char)));
 	size_t newPathGot;
 	err = copyinstr(newPath, (char *)newPathPointer, (size_t)PATH_MAX, &newPathGot);
 	if (err!=0)
