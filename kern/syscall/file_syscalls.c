@@ -138,8 +138,8 @@ int sys_open(const_userptr_t filePath, int flag, int *retval)
 	if(filePathAddress==0x40000000 || filePathAddress>=USERSPACETOP)
 		return EFAULT;
 
-	size_t filePathLen = strlen((char *)filePath);
-	char * filePathPointer = (char *)kmalloc(filePathLen*(sizeof(char)));
+	//size_t filePathLen = strlen((char *)filePath);
+	char * filePathPointer = (char *)kmalloc(PATH_MAX*(sizeof(char)));
 	size_t filePathGot;
 	int err = copyinstr(filePath, (char *)filePathPointer, (size_t)PATH_MAX, &filePathGot);
 
@@ -492,8 +492,8 @@ int sys_chdir(const_userptr_t newPath, int * retval)
 		return EFAULT;
 
 	int err = -1;
-	size_t newPathLen = strlen((char *)newPath);
-	char * newPathPointer = (char *)kmalloc(newPathLen*(sizeof(char)));
+	//size_t newPathLen = strlen((char *)newPath);
+	char * newPathPointer = (char *)kmalloc(PATH_MAX*(sizeof(char)));
 	size_t newPathGot;
 	err = copyinstr(newPath, (char *)newPathPointer, (size_t)PATH_MAX, &newPathGot);
 	if (err!=0)
