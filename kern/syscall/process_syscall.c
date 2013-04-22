@@ -206,6 +206,7 @@ int sys_fork(struct trapframe* tf_parent, int *retval)
 		//release_pid(child_pid);
 		return err;
 	}
+	//Overwrite default pid
 	child_thread->t_pid = child_pid;
 	init_pid_table_entry(child_thread);
 	//wait for child to complete tf and addrspace copying
