@@ -66,6 +66,7 @@
  * a valid address, and will make a *huge* mess if you scribble on it.
  */
 #define PADDR_TO_KVADDR(paddr) ((paddr)+MIPS_KSEG0)
+//#define KVADDR_TO_PADDR(paddr) ((paddr)-MIPS_KSEG0)
 
 /*
  * The top of user space. (Actually, the address immediately above the
@@ -118,28 +119,6 @@ struct tlbshootdown {
 
 #define TLBSHOOTDOWN_MAX 16
 
-/*ASST3*/
-/*Flag to check if vm is already bootstraped*/
-bool vm_bootstrap_flag = 0;
-struct lock* coremap_lock;
-typedef enum
-{
-	FREE,
-	DIRTY,
-	FIXED,
-	CLEAN
-}page_state_t;
-
-struct page
-{
-	/*Where page is mapped to*/
-	struct addrspace *as ;//need to update addrespace
-	vaddr_t va;
-	page_state_t state;
-	/*for paging algorithm  FIFO*/
-	uint64_t timestmap;
-
-};
 
 
 #endif /* _MIPS_VM_H_ */

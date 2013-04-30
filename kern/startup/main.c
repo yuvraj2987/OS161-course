@@ -112,6 +112,8 @@ boot(void)
 
 	/* Early initialization. */
 	ram_bootstrap();
+	vm_bootstrap();
+
 	/*ASST2*/
 	pid_table_init();
 	thread_bootstrap();
@@ -129,7 +131,7 @@ boot(void)
 
 
 	/* Late phase of initialization. */
-	vm_bootstrap();
+	//vm_bootstrap();
 	kprintf_bootstrap();
 	thread_start_cpus();
 
@@ -216,7 +218,7 @@ void
 kmain(char *arguments)
 {
 	boot();
-
+	//pid_table_init();
 	menu(arguments);
 
 	/* Should not get here */

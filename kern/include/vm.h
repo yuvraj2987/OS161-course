@@ -59,5 +59,33 @@ void free_kpages(vaddr_t addr);
 void vm_tlbshootdown_all(void);
 void vm_tlbshootdown(const struct tlbshootdown *);
 
+/*ASST3*/
+paddr_t getppages(unsigned long npages);
+paddr_t coremap_stealmem(unsigned long npages);
+
+/*Flag to check if vm is already bootstraped*/
+
+
+struct lock* coremap_lock;
+
+typedef enum
+{
+	FREE,
+	DIRTY,
+	FIXED,
+	CLEAN
+}page_state_t;
+
+struct page
+{
+	/*Where page is mapped to*/
+	struct addrspace *as ;//need to update addrespace
+	vaddr_t va;
+	page_state_t state;
+	/*for paging algorithm  FIFO*/
+	uint64_t timestmap;
+
+};
+
 
 #endif /* _VM_H_ */
