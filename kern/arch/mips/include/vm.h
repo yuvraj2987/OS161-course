@@ -120,7 +120,7 @@ struct tlbshootdown {
 
 /*ASST3*/
 /*Flag to check if vm is already bootstraped*/
-bool vm_bootstrap = 0;
+bool vm_bootstrap_flag = 0;
 struct lock* coremap_lock;
 typedef enum
 {
