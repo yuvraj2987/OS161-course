@@ -42,6 +42,7 @@ void pid_table_init(void)
 void pid_table_release(void)
 {
 	lock_destroy(pid_table_lock);
+
 }
 
 

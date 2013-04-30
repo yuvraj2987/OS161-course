@@ -118,5 +118,28 @@ struct tlbshootdown {
 
 #define TLBSHOOTDOWN_MAX 16
 
+/*ASST3*/
+/*Flag to check if vm is already bootstraped*/
+bool vm_bootstrap = 0;
+struct lock* coremap_lock;
+typedef enum
+{
+	FREE,
+	DIRTY,
+	FIXED,
+	CLEAN
+}page_state_t;
+
+struct page
+{
+	/*Where page is mapped to*/
+	struct addrspace *as ;//need to update addrespace
+	vaddr_t va;
+	page_state_t state;
+	/*for paging algorithm  FIFO*/
+	uint64_t timestmap;
+
+};
+
 
 #endif /* _MIPS_VM_H_ */
