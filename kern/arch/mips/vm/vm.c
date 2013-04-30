@@ -38,9 +38,26 @@ vm_bootstrap(void)
 		pages[i].va    = NULL;
 	}
 
-	vm_bootstrap = 1;
+	//set the flag
+	vm_bootstrap_flag = 1;
 
 }
 
 
+static
+paddr_t
+getppages(unsigned long npages)
+{
+	if(!vm_bootstrap_flag)
+	{
+		paddr_t addr;
+
+		spinlock_acquire(&stealmem_lock);
+
+		addr = ram_stealmem(npages);
+
+		spinlock_release(&stealmem_lock);
+		return addr;
+	}
+}
 
