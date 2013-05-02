@@ -213,7 +213,8 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 	 * to find where the phdr starts.
 	 */
 
-	for (i=0; i<eh.e_phnum; i++) {
+	for (i=0; i<eh.e_phnum; i++)
+	{
 		off_t offset = eh.e_phoff + i*eh.e_phentsize;
 		uio_kinit(&iov, &ku, &ph, sizeof(ph), offset, UIO_READ);
 
@@ -247,7 +248,7 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
 		if (result) {
 			return result;
 		}
-	}
+	}//for ends.
 
 	result = as_prepare_load(curthread->t_addrspace);
 	if (result) {

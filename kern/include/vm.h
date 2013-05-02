@@ -61,6 +61,7 @@ void vm_tlbshootdown(const struct tlbshootdown *);
 
 /*ASST3*/
 paddr_t getppages(unsigned long npages);
+paddr_t coremap_stealmem_user(unsigned long npages, struct addrspace* as, vaddr_t va);
 paddr_t coremap_stealmem(unsigned long npages);
 
 /*Flag to check if vm is already bootstraped*/

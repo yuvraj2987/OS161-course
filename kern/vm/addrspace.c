@@ -42,16 +42,20 @@
 struct addrspace *
 as_create(void)
 {
-	struct addrspace *as;
-
-	as = kmalloc(sizeof(struct addrspace));
+	struct addrspace *as = kmalloc(sizeof(struct addrspace));
 	if (as == NULL) {
 		return NULL;
 	}
 
 	/*
 	 * Initialize as needed.
+	 * ASST3
 	 */
+	as->stackTop = USERSTACK;
+	as->as_heapStart = 0;
+	as->as_heapEnd = 0;
+	as->regionList = NULL;
+	as->pageList = NULL;
 
 	return as;
 }
@@ -59,18 +63,40 @@ as_create(void)
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
-	struct addrspace *newas;
-
-	newas = as_create();
-	if (newas==NULL) {
-		return ENOMEM;
+	struct addrspace *newas = kmalloc(sizeof(struct addrspace));
+	if (newas==NULL)
+	{
+			return ENOMEM;
 	}
+	newas->stackTop = old->stackTop;
+	newas->as_heapStart = old->as_heapStart;
+	newas->as_heapEnd = old->as_heapEnd;
+	newas->regionList = NULL;
+	newas->pageList = NULL;
+
+	while(old->regionList!=NULL)
+	{
+		//struct region* oldRegion = old->regionList;
+
+		struct region* tempRegion = (struct region*)kmalloc(sizeof(struct region));
+		tempRegion->executable = old->regionList->executable;
+		tempRegion->readable = old->regionList->readable;
+		tempRegion->regionSize = old->regionList->regionSize;
+		tempRegion->regionStart = old->regionList->regionStart;
+		tempRegion->writable = old->regionList->writable;
+
+		tempRegion->nextRegion = NULL;
+
+	}
+
+	//newas = as_create();
+
 
 	/*
 	 * Write this.
 	 */
 
-	(void)old;
+	//(void)old;
 	
 	*ret = newas;
 	return 0;
@@ -113,14 +139,76 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	/*
 	 * Write this.
 	 */
+	struct region *newregion = region_getNewRegion(as);
+	newregion->nextRegion = NULL;
+	newregion->readable = readable;
+	newregion->writable = writeable;
+	newregion->executable = executable;
+	newregion->regionSize = sz;
+	newregion->regionStart = vaddr;
+	//newregion->regionPageList = NULL;
 
-	(void)as;
+	size_t numberOfPages = (sz + PAGE_SIZE - 1)/PAGE_SIZE;
+
+	for(size_t count=0; count<numberOfPages; count++)
+	{
+		struct pageEntry* newPage = kmalloc(sizeof(struct pageEntry));
+		newPage->va = vaddr;
+		newPage->pa = coremap_stealmem_user(1, as, vaddr);
+		newPage->valid = 1;
+		newPage->readable = readable;
+		newPage->writable = writeable;
+		newPage->executable = executable;
+
+		if(as->pageList==NULL)
+		{
+			as->pageList = newPage;
+		}
+		else
+		{
+			struct pageEntry* head = as->pageList;
+			while(head->nextPageEntry!=NULL)
+			{
+				head = head->nextPageEntry;
+			}
+
+			head->nextPageEntry = newPage;
+		}
+
+		newPage->nextPageEntry = NULL;
+		vaddr = vaddr + PAGE_SIZE;
+	}//end of for loop
+
+	return 0;
+
+	/*(void)as;
 	(void)vaddr;
 	(void)sz;
 	(void)readable;
 	(void)writeable;
 	(void)executable;
-	return EUNIMP;
+	return EUNIMP;*/
+}
+
+struct region* region_getNewRegion(struct addrspace *as)
+{
+	struct region *head = as->regionList;
+	struct region *newRegion = (struct region*)kmalloc(sizeof(struct region));
+
+	if(head==NULL)
+	{
+		as->regionList = newRegion;
+		return newRegion;
+	}
+	else
+	{
+		while(head->nextRegion!=NULL)
+		{
+				head = head->nextRegion;
+		}
+		head->nextRegion = newRegion;
+		return newRegion;
+	}
 }
 
 int
@@ -152,7 +240,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	 * Write this.
 	 */
 
-	(void)as;
+		(void)as;
 
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;

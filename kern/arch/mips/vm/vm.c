@@ -35,8 +35,9 @@ vm_bootstrap(void)
 	/* pages should be a kernel virtual address !!  */
 	struct page* pages = (struct page*)PADDR_TO_KVADDR(firstaddr);
 	total_pages = lastaddr/PAGE_SIZE;
-	unsigned long kern_page_num = firstaddr/PAGE_SIZE;
+	//unsigned long kern_page_num = firstaddr/PAGE_SIZE;
 	freeaddr = firstaddr + total_pages * sizeof(struct page);
+	unsigned long kern_page_num = freeaddr/PAGE_SIZE;
 	/*Init kern pages*/
 	for(unsigned long i =0; i<kern_page_num; i++)
 	{
@@ -79,6 +80,31 @@ paddr_t getppages(unsigned long npages)
 	return addr;
 }
 
+paddr_t coremap_stealmem_user(unsigned long npages, struct addrspace* as, vaddr_t va)
+{
+	(void)npages;
+	unsigned long count =0;
+	paddr_t returnAdd = 0;
+
+	spinlock_acquire(&stealmem_lock);
+
+	struct page* pages = (struct page*)PADDR_TO_KVADDR(firstaddr);
+
+	for(count=0; count<total_pages; count++)
+	{
+		if(pages[count].state==FREE)
+		{
+			returnAdd = count*PAGE_SIZE;
+			pages[count].state=DIRTY;
+			pages[count].as = as;
+			pages[count].va = va;
+		}
+	}
+
+	spinlock_release(&stealmem_lock);
+	return returnAdd;
+
+}
 
 paddr_t coremap_stealmem(unsigned long npages)
 {
