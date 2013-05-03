@@ -32,6 +32,8 @@
 #include <lib.h>
 #include <addrspace.h>
 #include <vm.h>
+#include <mips/tlb.h>
+#include <spl.h>
 
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -63,6 +65,9 @@ as_create(void)
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
+	/*
+	 * Write this.
+	 */
 	struct addrspace *newas = kmalloc(sizeof(struct addrspace));
 	if (newas==NULL)
 	{
@@ -74,30 +79,9 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	newas->regionList = NULL;
 	newas->pageList = NULL;
 
-	while(old->regionList!=NULL)
-	{
-		//struct region* oldRegion = old->regionList;
+	newas->regionList = copyRegionList(old->regionList);
+	newas->pageList = copyPageList(old->pageList);
 
-		struct region* tempRegion = (struct region*)kmalloc(sizeof(struct region));
-		tempRegion->executable = old->regionList->executable;
-		tempRegion->readable = old->regionList->readable;
-		tempRegion->regionSize = old->regionList->regionSize;
-		tempRegion->regionStart = old->regionList->regionStart;
-		tempRegion->writable = old->regionList->writable;
-
-		tempRegion->nextRegion = NULL;
-
-	}
-
-	//newas = as_create();
-
-
-	/*
-	 * Write this.
-	 */
-
-	//(void)old;
-	
 	*ret = newas;
 	return 0;
 }
@@ -108,18 +92,47 @@ as_destroy(struct addrspace *as)
 	/*
 	 * Clean up as needed.
 	 */
-	
+
+	if(as->pageList!=NULL)
+	{
+		struct pageEntry* head = as->pageList;
+		while(head!=NULL)
+		{
+			struct pageEntry* nextNode = head->nextPageEntry;
+			kfree(head);
+			head = nextNode;
+		}
+	}
+	if(as->regionList!=NULL)
+	{
+		struct region* head = as->regionList;
+		while(head!=NULL)
+		{
+			struct region* nextNode = head->nextRegion;
+			kfree(head);
+			head = nextNode;
+		}
+	}
 	kfree(as);
 }
 
 void
 as_activate(struct addrspace *as)
 {
-	/*
-	 * Write this.
-	 */
+	int i, spl;
 
-	(void)as;  // suppress warning until code gets written
+	(void)as;
+
+	/* Disable interrupts on this CPU while frobbing the TLB. */
+	spl = splhigh();
+
+	for (i=0; i<NUM_TLB; i++)
+	{
+		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+	}
+
+	splx(spl);
+
 }
 
 /*
@@ -179,6 +192,8 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		vaddr = vaddr + PAGE_SIZE;
 	}//end of for loop
 
+	as->as_heapStart = vaddr + sz;
+	as->as_heapEnd = vaddr + sz;
 	return 0;
 
 	/*(void)as;
@@ -239,12 +254,80 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	/*
 	 * Write this.
 	 */
-
-		(void)as;
-
+	(void)as;
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;
 	
 	return 0;
 }
 
+struct region* copyRegionList(struct region* head)
+{
+	struct region* newHead = NULL;
+	struct region* newTail = NULL;
+	struct region* current = head;
+
+	while(current!=NULL)
+	{
+		if(newHead==NULL)
+		{
+			newHead = (struct region*)kmalloc(sizeof(struct region));
+			newHead->executable = current->executable;
+			newHead->readable = current->readable;
+			newHead->regionSize = current->regionSize;
+			newHead->regionStart = current->regionStart;
+			newHead->writable = current->writable;
+			newHead->nextRegion = NULL;
+		}
+		else
+		{
+			newTail->nextRegion = (struct region*)kmalloc(sizeof(struct region));
+			newTail = newTail->nextRegion;
+			newTail->executable = current->executable;
+			newTail->readable = current->readable;
+			newTail->regionSize = current->regionSize;
+			newTail->regionStart = current->regionStart;
+			newTail->writable = current->writable;
+			newTail->nextRegion = NULL;
+		}
+		current = current->nextRegion;
+	}
+	return newHead;
+}
+
+struct pageEntry* copyPageList(struct pageEntry* head)
+{
+	struct pageEntry* newHead = NULL;
+	struct pageEntry* newTail = NULL;
+	struct pageEntry* current = head;
+
+	while(current!=NULL)
+	{
+		if(newHead==NULL)
+		{
+			newHead = (struct pageEntry*)kmalloc(sizeof(struct pageEntry));
+			newHead->executable = current->executable;
+			newHead->pa = current->pa;
+			newHead->readable = current->readable;
+			newHead->va = current->va;
+			newHead->valid = current->valid;
+			newHead->writable = current->writable;
+			newHead->nextPageEntry = NULL;
+		}
+		else
+		{
+			newTail->nextPageEntry = (struct pageEntry*)kmalloc(sizeof(struct pageEntry));
+			newTail = newTail->nextPageEntry;
+			newTail->executable = current->executable;
+			newTail->pa = current->pa;
+			newTail->readable = current->readable;
+			newTail->va = current->va;
+			newTail->valid = current->valid;
+			newTail->writable = current->writable;
+
+			newTail->nextPageEntry= NULL;
+		}
+		current = current->nextPageEntry;
+	}
+	return newHead;
+}

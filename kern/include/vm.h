@@ -64,7 +64,7 @@ paddr_t getppages(unsigned long npages);
 paddr_t coremap_stealmem_user(unsigned long npages, struct addrspace* as, vaddr_t va);
 paddr_t coremap_stealmem(unsigned long npages);
 
-/*Flag to check if vm is already bootstraped*/
+//void addPageToList(struct pageEntry* pageList, struct pageEntry* newPage);
 
 
 struct lock* coremap_lock;

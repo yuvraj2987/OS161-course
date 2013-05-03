@@ -93,24 +93,24 @@ struct pageEntry
 /*
  * Functions in addrspace.c:
  *
- *    as_create - create a new empty address space. You need to make 
+ *    >>as_create - create a new empty address space. You need to make
  *                sure this gets called in all the right places. You
  *                may find you want to change the argument list. May
  *                return NULL on out-of-memory error.
  *
- *    as_copy   - create a new address space that is an exact copy of
+ *    >>as_copy   - create a new address space that is an exact copy of
  *                an old one. Probably calls as_create to get a new
  *                empty address space and fill it in, but that's up to
  *                you.
  *
- *    as_activate - make the specified address space the one currently
+ *    >>dumbVm>>as_activate - make the specified address space the one currently
  *                "seen" by the processor. Argument might be NULL, 
  *                meaning "no particular address space".
  *
- *    as_destroy - dispose of an address space. You may need to change
+ *    >>as_destroy - dispose of an address space. You may need to change
  *                the way this works if implementing user-level threads.
  *
- *    as_define_region - set up a region of memory within the address
+ *    >>as_define_region - set up a region of memory within the address
  *                space.
  *
  *    as_prepare_load - this is called before actually loading from an
@@ -119,7 +119,7 @@ struct pageEntry
  *    as_complete_load - this is called when loading from an executable
  *                is complete.
  *
- *    as_define_stack - set up the stack region in the address space.
+ *    >>as_define_stack - set up the stack region in the address space.
  *                (Normally called *after* as_complete_load().) Hands
  *                back the initial stack pointer for the new process.
  */
@@ -138,6 +138,9 @@ struct region* region_getNewRegion(struct addrspace *as);
 int               as_prepare_load(struct addrspace *as);
 int               as_complete_load(struct addrspace *as);
 int               as_define_stack(struct addrspace *as, vaddr_t *initstackptr);
+
+struct region* copyRegionList(struct region* head);
+struct pageEntry* copyPageList(struct pageEntry* head);
 
 
 /*

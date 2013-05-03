@@ -357,9 +357,7 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	KASSERT(new->as_pbase2 != 0);
 	KASSERT(new->as_stackpbase != 0);
 
-	memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
-		(const void *)PADDR_TO_KVADDR(old->as_pbase1),
-		old->as_npages1*PAGE_SIZE);
+	memmove((void *)PADDR_TO_KVADDR(new->as_pbase1), (const void *)PADDR_TO_KVADDR(old->as_pbase1), old->as_npages1*PAGE_SIZE);
 
 	memmove((void *)PADDR_TO_KVADDR(new->as_pbase2),
 		(const void *)PADDR_TO_KVADDR(old->as_pbase2),
