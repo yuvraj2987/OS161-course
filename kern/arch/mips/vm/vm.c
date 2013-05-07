@@ -89,6 +89,7 @@ paddr_t coremap_stealmem_user(unsigned long npages, struct addrspace* as, vaddr_
 	paddr_t returnAdd = 0;
 
 	spinlock_acquire(&stealmem_lock);
+	//lock_acquire(coremap_lock);
 
 	struct page* pages = (struct page*)PADDR_TO_KVADDR(firstaddr);
 
@@ -102,6 +103,16 @@ paddr_t coremap_stealmem_user(unsigned long npages, struct addrspace* as, vaddr_
 			pages[count].va = va;
 		}
 	}
+<<<<<<< Updated upstream
+=======
+	//lock_release(coremap_lock);
+	spinlock_release(&stealmem_lock);
+	/*If no page available in physical memory*/
+	/*
+	if(!pageFound)
+		return 0;
+		*/
+>>>>>>> Stashed changes
 
 	spinlock_release(&stealmem_lock);
 	return returnAdd;
@@ -114,6 +125,11 @@ paddr_t coremap_stealmem(unsigned long npages)
 	unsigned long count =0;
 	struct page* pages = (struct page*)PADDR_TO_KVADDR(firstaddr);
 
+<<<<<<< Updated upstream
+=======
+	//lock_acquire(coremap_lock);
+	spinlock_acquire(&stealmem_lock);
+>>>>>>> Stashed changes
 	for(count=0; count<total_pages; count++)
 	{
 		if(pages[count].state==FREE)
@@ -122,10 +138,14 @@ paddr_t coremap_stealmem(unsigned long npages)
 			pages[count].state=DIRTY;
 			pages[count].as = NULL;
 			pages[count].va = PADDR_TO_KVADDR(returnAdd);
+			//lock_release(coremap_lock);
+			spinlock_release(&stealmem_lock);
 			return returnAdd;
 		}
 	}
 	// In case of no free page
+	//lock_release(coremap_lock);
+	spinlock_release(&stealmem_lock);
 	return 0;
 }
 
@@ -133,6 +153,44 @@ vaddr_t alloc_kpages(int npages)
 {
 	paddr_t psyAdd = getppages(npages);
 	return PADDR_TO_KVADDR(psyAdd);
+<<<<<<< Updated upstream
+=======
+
+}
+
+/*allocate a physical page for given virtual address updaes page table info in
+ * coremap structure
+ * seems similar to coremap_stealmem_user except 2 parameters
+ */
+paddr_t page_alloc(struct addrspace* as, vaddr_t va, page_state_t phy_page_state)
+{
+	unsigned long count =0;
+	paddr_t phyAdd = 0;
+	struct page* pages = (struct page*)PADDR_TO_KVADDR(firstaddr);
+
+	lock_acquire(coremap_lock);
+	for(count=0; count<total_pages; count++)
+	{
+		if(pages[count].state==FREE)
+		{
+
+			phyAdd = count*PAGE_SIZE;
+			pages[count].state=phy_page_state;
+			pages[count].as = as;
+			pages[count].va = va;
+			/*set timestamp*/
+			break;
+		}
+	}
+	/*If here no free page in main mem
+	 * Implement swapping
+	 * make page available
+	 * set coremap data for the page
+	 * curretnly I am throwing out of memory error*/
+	lock_release(coremap_lock);
+
+	return phyAdd;
+>>>>>>> Stashed changes
 }
 
 void free_kpages(vaddr_t addr)
@@ -319,6 +377,12 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 
 }
 
+<<<<<<< Updated upstream
+=======
+
+
+
+>>>>>>> Stashed changes
 /*void addPageToList(struct pageEntry* pageList, struct pageEntry* newPage)
 {
 	if(pageList==NULL)

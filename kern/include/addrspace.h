@@ -141,6 +141,10 @@ int               as_define_stack(struct addrspace *as, vaddr_t *initstackptr);
 
 struct region* copyRegionList(struct region* head);
 struct pageEntry* copyPageList(struct pageEntry* head);
+<<<<<<< Updated upstream
+=======
+paddr_t page_alloc(struct addrspace* as, vaddr_t va, page_state_t state);
+>>>>>>> Stashed changes
 
 
 /*
