@@ -62,6 +62,7 @@ struct page_table
 	paddr_t	as_physical;
 	//Permission
 	bool read, write,execute;
+	bool allocated;
 	struct page_table *next_page_entry;
 };
 
@@ -82,6 +83,7 @@ struct addrspace {
         vaddr_t heap_end;
         struct node *region_list;
         struct node *page_table_list;
+
 #endif
 
 };
