@@ -56,35 +56,36 @@ struct region
 	struct region *next_region;
 };
 
-struct page_table
+struct page_table_entry
 {
 	vaddr_t as_virtual;
 	paddr_t	as_physical;
 	//Permission
 	bool read, write,execute;
 	bool allocated;
-	struct page_table *next_page_entry;
+	struct page_table_entry *next_page_entry;
 };
 
 struct addrspace {
 #if OPT_DUMBVM
-        vaddr_t as_vbase1;
-        paddr_t as_pbase1;
-        size_t as_npages1;
-        vaddr_t as_vbase2;
-        paddr_t as_pbase2;
-        size_t as_npages2;
-        paddr_t as_stackpbase;
+	vaddr_t as_vbase1;
+	paddr_t as_pbase1;
+	size_t as_npages1;
+	vaddr_t as_vbase2;
+	paddr_t as_pbase2;
+	size_t as_npages2;
+	paddr_t as_stackpbase;
 #else
-        /* Put stuff here for your VM system */
-        /*ASST3*/
-        vaddr_t stacktop;
-        vaddr_t heap_start;
-        vaddr_t heap_end;
-        struct node *region_list;
-        struct node *page_table_list;
 
 #endif
+/* Put stuff here for your VM system */
+	/*ASST3*/
+	vaddr_t stacktop;
+	vaddr_t heap_start;
+	vaddr_t heap_end;
+	struct region *region_list;
+	struct page_table_entry *page_table_list;
+
 
 };
 
@@ -128,10 +129,10 @@ void              as_activate(struct addrspace *);
 void              as_destroy(struct addrspace *);
 
 int               as_define_region(struct addrspace *as, 
-                                   vaddr_t vaddr, size_t sz,
-                                   int readable, 
-                                   int writeable,
-                                   int executable);
+		vaddr_t vaddr, size_t sz,
+		int readable,
+		int writeable,
+		int executable);
 int               as_prepare_load(struct addrspace *as);
 int               as_complete_load(struct addrspace *as);
 int               as_define_stack(struct addrspace *as, vaddr_t *initstackptr);
@@ -160,5 +161,12 @@ void append_region(struct region **reg_head_ref, struct region *new_region);
  * 1st param - pointer to the page tbale list head
  * 2nd param - page table entry to be appended
  * */
-void append_page_table_entry(struct page_table **pgtbl_head_ref, struct page_table *new_page);
+void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct page_table_entry *new_page);
+
+/*
+ * Iterate over page_table_list of old and copy its content to new_page table create in new
+ * if old page is allocated then
+ * create a new physical page for new addrspace and copy its content
+ * */
+void copy_page_table(struct addrspace *old, struct addrspace *new);
 #endif /* _ADDRSPACE_H_ */

@@ -100,6 +100,7 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
 	panic("dumbvm tried to do tlb shootdown?!\n");
 }
 
+/*
 int
 vm_fault(int faulttype, vaddr_t faultaddress)
 {
@@ -116,8 +117,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	switch (faulttype) {
 	    case VM_FAULT_READONLY:
-		/* We always create pages read-write, so we can't get this */
-		panic("dumbvm: got VM_FAULT_READONLY\n");
+*/
+	/* We always create pages read-write, so we can't get this */
+		/*panic("dumbvm: got VM_FAULT_READONLY\n");
 	    case VM_FAULT_READ:
 	    case VM_FAULT_WRITE:
 		break;
@@ -127,16 +129,17 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 
 	as = curthread->t_addrspace;
 	if (as == NULL) {
+	*/
 		/*
 		 * No address space set up. This is probably a kernel
 		 * fault early in boot. Return EFAULT so as to panic
 		 * instead of getting into an infinite faulting loop.
 		 */
-		return EFAULT;
+		/*return EFAULT;
 	}
-
+*/
 	/* Assert that the address space has been set up properly. */
-	KASSERT(as->as_vbase1 != 0);
+/*	KASSERT(as->as_vbase1 != 0);
 	KASSERT(as->as_pbase1 != 0);
 	KASSERT(as->as_npages1 != 0);
 	KASSERT(as->as_vbase2 != 0);
@@ -168,12 +171,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	else {
 		return EFAULT;
 	}
-
+*/
 	/* make sure it's page-aligned */
-	KASSERT((paddr & PAGE_FRAME) == paddr);
+//	KASSERT((paddr & PAGE_FRAME) == paddr);
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
-	spl = splhigh();
+/*	spl = splhigh();
 
 	for (i=0; i<NUM_TLB; i++) {
 		tlb_read(&ehi, &elo, i);
@@ -193,7 +196,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	return EFAULT;
 }
 
-
+*/
 //Below functions are written in address.c
 /*
 struct addrspace *

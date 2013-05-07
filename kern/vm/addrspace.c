@@ -32,6 +32,7 @@
 #include <lib.h>
 #include <addrspace.h>
 #include <vm.h>
+#include <spl.h>
 #include <mips/tlb.h>
 /*
  * Note! If OPT_DUMBVM is set, as is the case until you start the VM
@@ -84,10 +85,11 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	KASSERT(newas->heap_end != 0);
 	KASSERT(newas->stacktop != 0);
 	KASSERT(newas->region_list != NULL);
-	//Incomplete
-
-
+	//newas->page_table_list = copy_page_table(old->page_table_list);
+	copy_page_table(old, newas);
+	//error checks
 	*ret = newas;
+
 	return 0;
 }
 
@@ -161,9 +163,9 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	new_region->write = writeable;
 	append_region(&as->region_list, new_region);
 	cur_page_addr = vaddr;
-	for(int i = 0; i<npages; i++)
+	for(unsigned int i = 0; i<npages; i++)
 	{
-		struct page_table *new_pte = (struct page_table)kmalloc(sizeof(struct page_table));
+		struct page_table_entry *new_pte = (struct page_table_entry*)kmalloc(sizeof(struct page_table_entry));
 
 		if(new_pte == NULL)
 			return ENOMEM;
@@ -264,6 +266,91 @@ struct region* copy_region_list(struct region *list_head)
 	return new_list_head;
 }
 
+
+//struct page_table_entry* copy_page_table(struct page_table_entry *pte_head)
+void copy_page_table(struct addrspace *old, struct addrspace *new)
+{
+	struct page_table_entry *cur = old->page_table_list;
+	struct page_table_entry *new_pte_head = NULL;
+	struct page_table_entry *new_pte_tail = NULL;
+	while(cur != NULL)
+	{
+		if(new_pte_head == NULL)
+		{
+			new_pte_head = (struct page_table_entry*)kmalloc(sizeof(struct page_table_entry));
+
+			if(new_pte_head == NULL)
+				return;
+
+			new_pte_tail = new_pte_head;
+			//Data
+			cur->as_virtual = new_pte_head->as_virtual;
+			cur->execute = new_pte_head->execute;
+			cur->read = new_pte_head->read;
+			cur->write = new_pte_head->write;
+			cur->allocated = new_pte_head->allocated;
+			if(cur->allocated)
+			{
+				/*
+				 * Allocate a new physical page for new addrspace page table
+				 * Copy content of new page
+				 * */
+				//get_user_pages(unsigned long npages, struct addrspace* as, vaddr_t va)
+				new_pte_head->as_physical = get_user_pages( 1, new, new_pte_head->as_virtual);
+
+				if(new_pte_head->as_physical == 0)
+					panic("Error: Cannot allocate get_user_pages in copy_page_table\n");
+				/*
+				memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
+						(const void *)PADDR_TO_KVADDR(old->as_pbase1),
+						old->as_npages1*PAGE_SIZE);
+						*/
+				memmove((void *)PADDR_TO_KVADDR(cur->as_physical),
+						(const void *)PADDR_TO_KVADDR(new_pte_head->as_physical),PAGE_SIZE);
+			}
+
+		}
+		else
+		{
+			new_pte_tail->next_page_entry = (struct region *)kmalloc(sizeof(struct region));
+			new_pte_tail = new_pte_tail->next_page_entry;
+			new_pte_tail->next_page_entry = NULL;
+			//Data
+			cur->as_virtual = new_pte_tail->as_virtual;
+			cur->execute = new_pte_tail->execute;
+			cur->read = new_pte_tail->read;
+			cur->write = new_pte_tail->write;
+			cur->allocated = new_pte_tail->allocated;
+			if(cur->allocated)
+			{
+				/*
+				 * Allocate a new physical page for new addrspace page table
+				 * Copy content of new page
+				 * */
+				//get_user_pages(unsigned long npages, struct addrspace* as, vaddr_t va)
+
+				new_pte_tail->as_physical = get_user_pages( 1, new, new_pte_head->as_virtual);
+				if(new_pte_tail->as_physical == 0)
+					panic("Error: Cannot allocate get_user_pages in copy_page_table\n");
+				/*
+							memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
+									(const void *)PADDR_TO_KVADDR(old->as_pbase1),
+									old->as_npages1*PAGE_SIZE);
+				 */
+				memmove((void *)PADDR_TO_KVADDR(cur->as_physical),
+						(const void *)PADDR_TO_KVADDR(new_pte_tail->as_physical),PAGE_SIZE);
+			}
+
+
+		}//end of ie else
+
+		cur = cur->next_page_entry;
+	}//end of while
+
+}
+
+
+
 void append_region(struct region **reg_head_ref, struct region *new_region)
 {
 	struct region *cur = *reg_head_ref;
@@ -283,9 +370,9 @@ void append_region(struct region **reg_head_ref, struct region *new_region)
 	}
 }
 
-void append_page_table_entry(struct page_table **pgtbl_head_ref, struct page_table *new_page)
+void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct page_table_entry *new_page)
 {
-	struct page_table *cur = *pgtbl_head_ref;
+	struct page_table_entry *cur = *pgtbl_head_ref;
 	if(cur == NULL)
 	{
 		*pgtbl_head_ref = new_page;
