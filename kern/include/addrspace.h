@@ -47,6 +47,23 @@ struct vnode;
  *
  * You write this.
  */
+struct region
+{
+	vaddr_t as_region_start;
+	size_t region_size;
+	//Permissions
+	bool read, write, execute;
+	struct region *next_region;
+};
+
+struct page_table
+{
+	vaddr_t as_virtual;
+	paddr_t	as_physical;
+	//Permission
+	bool read, write,execute;
+	struct page_table *next_page_entry;
+};
 
 struct addrspace {
 #if OPT_DUMBVM
@@ -59,6 +76,12 @@ struct addrspace {
         paddr_t as_stackpbase;
 #else
         /* Put stuff here for your VM system */
+        /*ASST3*/
+        vaddr_t stacktop;
+        vaddr_t heap_start;
+        vaddr_t heap_end;
+        struct node *region_list;
+        struct node *page_table_list;
 #endif
 
 };
@@ -120,6 +143,11 @@ int               as_define_stack(struct addrspace *as, vaddr_t *initstackptr);
  */
 
 int load_elf(struct vnode *v, vaddr_t *entrypoint);
+/*
+ * ASST3
+ * */
 
+
+struct region* copy_region_list(struct region *list_head);
 
 #endif /* _ADDRSPACE_H_ */

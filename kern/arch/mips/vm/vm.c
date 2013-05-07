@@ -193,6 +193,9 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	return EFAULT;
 }
 
+
+//Below functions are written in address.c
+/*
 struct addrspace *
 as_create(void)
 {
@@ -211,22 +214,24 @@ as_create(void)
 
 	return as;
 }
-
+*/
+/*
 void
 as_destroy(struct addrspace *as)
 {
 	kfree(as);
 }
-
+*/
+/*
 void
 as_activate(struct addrspace *as)
 {
 	int i, spl;
 
 	(void)as;
-
+*/
 	/* Disable interrupts on this CPU while frobbing the TLB. */
-	spl = splhigh();
+/*	spl = splhigh();
 
 	for (i=0; i<NUM_TLB; i++) {
 		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
@@ -234,24 +239,25 @@ as_activate(struct addrspace *as)
 
 	splx(spl);
 }
-
+*/
+/*
 int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		 int readable, int writeable, int executable)
 {
 	size_t npages;
-
+*/
 	/* Align the region. First, the base... */
-	sz += vaddr & ~(vaddr_t)PAGE_FRAME;
+/*	sz += vaddr & ~(vaddr_t)PAGE_FRAME;
 	vaddr &= PAGE_FRAME;
-
+*/
 	/* ...and now the length. */
-	sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
+/*	sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
 
 	npages = sz / PAGE_SIZE;
-
+*/
 	/* We don't use these - all pages are read-write */
-	(void)readable;
+/*	(void)readable;
 	(void)writeable;
 	(void)executable;
 
@@ -266,21 +272,23 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		as->as_npages2 = npages;
 		return 0;
 	}
-
+*/
 	/*
 	 * Support for more than two regions is not available.
 	 */
-	kprintf("dumbvm: Warning: too many regions\n");
+/*	kprintf("dumbvm: Warning: too many regions\n");
 	return EUNIMP;
 }
-
+*/
+/*
 static
 void
 as_zero_region(paddr_t paddr, unsigned npages)
 {
 	bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
 }
-
+*/
+/*
 int
 as_prepare_load(struct addrspace *as)
 {
@@ -309,14 +317,16 @@ as_prepare_load(struct addrspace *as)
 
 	return 0;
 }
-
+*/
+/*
 int
 as_complete_load(struct addrspace *as)
 {
 	(void)as;
 	return 0;
 }
-
+*/
+/*
 int
 as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
@@ -325,7 +335,8 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	*stackptr = USERSTACK;
 	return 0;
 }
-
+*/
+/*
 int
 as_copy(struct addrspace *old, struct addrspace **ret)
 {
@@ -340,9 +351,9 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	new->as_npages1 = old->as_npages1;
 	new->as_vbase2 = old->as_vbase2;
 	new->as_npages2 = old->as_npages2;
-
+*/
 	/* (Mis)use as_prepare_load to allocate some physical memory. */
-	if (as_prepare_load(new)) {
+/*	if (as_prepare_load(new)) {
 		as_destroy(new);
 		return ENOMEM;
 	}
@@ -366,3 +377,4 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	*ret = new;
 	return 0;
 }
+*/
