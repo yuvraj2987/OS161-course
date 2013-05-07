@@ -137,15 +137,6 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 {
 	/*
 	 * Write this.
-
-
-	(void)as;
-	(void)vaddr;
-	(void)sz;
-	(void)readable;
-	(void)writeable;
-	(void)executable;
-	return EUNIMP;
 	 */
 	size_t npages;
 	vaddr_t cur_page_addr;
@@ -161,7 +152,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	struct region *new_region = (struct region*)kmalloc(sizeof(struct region));
 
 	if(new_region == NULL)
-		return 0;
+		return ENOMEM;
 
 	new_region->as_region_start = vaddr;
 	new_region->region_size = sz;
@@ -175,7 +166,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		struct page_table *new_pte = (struct page_table)kmalloc(sizeof(struct page_table));
 
 		if(new_pte == NULL)
-			return 0;
+			return ENOMEM;
 
 		new_pte->as_virtual = cur_page_addr;
 		new_pte->allocated = 0;	//false
@@ -192,8 +183,10 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	{
 		as->heap_start = vaddr+sz;
 		as->heap_start &= PAGE_FRAME;//Page alignment
+		as->heap_end  = as->heap_start;
 	}
 
+	return 0;
 }
 
 int
