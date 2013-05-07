@@ -200,10 +200,47 @@ struct region* copy_region_list(struct region *list_head)
 			new_list_tail->read = current->read;
 			new_list_tail->write = current->write;
 
-		}
+		}//end of if else
+		current = current->next_region;
 	}//end of while loop
 
 	return new_list_head;
 }
 
+void append_region(struct region **reg_head_ref, struct region *new_region)
+{
+	struct region *cur = *reg_head_ref;
+	if(cur == NULL)
+	{
+		*reg_head_ref = new_region;
+	}
+	else
+	{
+		while(cur->next_region != NULL)
+		{
+			cur = cur->next_region;
+		}
 
+		cur->next_region = new_region;
+		new_region->next_region = NULL;
+	}
+}
+
+void append_page_table_entry(struct page_table **pgtbl_head_ref, struct page_table *new_page)
+{
+	struct page_table *cur = *pgtbl_head_ref;
+	if(cur == NULL)
+	{
+		*pgtbl_head_ref = new_page;
+	}
+	else
+	{
+		while(cur->next_page_entry != NULL)
+		{
+			cur = cur->next_page_entry;
+		}
+
+		cur->next_page_entry = new_page;
+		new_page->next_page_entry = NULL;
+	}
+}
