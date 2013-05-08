@@ -40,6 +40,7 @@
  * used. The cheesy hack versions in dumbvm.c are used instead.
  */
 
+
 struct addrspace *
 as_create(void)
 {
@@ -62,8 +63,7 @@ as_create(void)
 	return as;
 }
 
-int
-as_copy(struct addrspace *old, struct addrspace **ret)
+int as_copy(struct addrspace *old, struct addrspace **ret)
 {
 	struct addrspace *newas;
 
@@ -121,6 +121,7 @@ as_destroy(struct addrspace *as)
 	 * 6. Free each region
 	 * 7. destroy addrspace
 	 */
+
 	struct region *cur_reg = as->region_list;
 	struct region *next_reg = NULL;
 	while(cur_reg != NULL)
@@ -254,6 +255,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;
+
 	/*Allocate stack PTE beforehand*/
 	as->stacktop = USERSTACK - (VM_STACKPAGES*PAGE_SIZE);
 	vaddr_t stack_page = as->stacktop;
@@ -438,3 +440,4 @@ void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct pa
 		new_page->next_page_entry = NULL;
 	}
 }
+

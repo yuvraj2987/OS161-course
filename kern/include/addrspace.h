@@ -76,7 +76,6 @@ struct addrspace {
 	size_t as_npages2;
 	paddr_t as_stackpbase;
 #else
-
 #endif
 /* Put stuff here for your VM system */
 	/*ASST3*/
@@ -85,8 +84,6 @@ struct addrspace {
 	vaddr_t heap_end;
 	struct region *region_list;
 	struct page_table_entry *page_table_list;
-
-
 };
 
 /*
@@ -169,4 +166,6 @@ void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct pa
  * create a new physical page for new addrspace and copy its content
  * */
 void copy_page_table(struct addrspace *old, struct addrspace *new);
+
+
 #endif /* _ADDRSPACE_H_ */
