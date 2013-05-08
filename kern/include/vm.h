@@ -54,8 +54,11 @@ struct page
 {
     struct addrspace* as;
     vaddr_t va;
+    paddr_t pa;
     pageState state;
+    int pageCount;
 };
+paddr_t coreMap_stealmem(unsigned long npages);
 
 /* Initialization function */
 void vm_bootstrap(void);
