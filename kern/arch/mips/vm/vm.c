@@ -15,7 +15,7 @@
 #include <mips/tlb.h>
 #include <vm.h>
 
-#define VM_STACKPAGES    12
+//#define VM_STACKPAGES    12
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 
 bool isVMStarted = 0;

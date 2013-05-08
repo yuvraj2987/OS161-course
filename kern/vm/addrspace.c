@@ -250,11 +250,30 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	 * Write this.
 	 */
 
-	(void)as;
+
 
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;
-	
+	/*Allocate stack PTE beforehand*/
+	as->stacktop = USERSTACK - (VM_STACKPAGES*PAGE_SIZE);
+	vaddr_t stack_page = as->stacktop;
+	for(int i = 0; i <= VM_STACKPAGES; i++)
+	{
+		struct page_table_entry *new_page = (struct page_table_entry *)kmalloc(sizeof(struct page_table_entry));
+
+		if(new_page == NULL)
+			return ENOMEM;
+		new_page->allocated = 0;
+		new_page->as_physical = 0; /*Unintitalized*/
+		new_page->as_virtual = stack_page;
+		new_page->execute = 0;
+		new_page->read 	  = 1;
+		new_page->write   = 1;
+		append_page_table_entry(&as->page_table_list, new_page);
+		//increment address
+		stack_page = stack_page - PAGE_SIZE;
+	}
+
 	return 0;
 }
 
@@ -342,7 +361,7 @@ void copy_page_table(struct addrspace *old, struct addrspace *new)
 		}
 		else
 		{
-			new_pte_tail->next_page_entry = (struct region *)kmalloc(sizeof(struct region));
+			new_pte_tail->next_page_entry = (struct page_table_entry *)kmalloc(sizeof(struct page_table_entry));
 			new_pte_tail = new_pte_tail->next_page_entry;
 			new_pte_tail->next_page_entry = NULL;
 			//Data

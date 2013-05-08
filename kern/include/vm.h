@@ -45,6 +45,7 @@
 #define VM_FAULT_READONLY    2    /* A write to a readonly page was attempted*/
 
 /*ASST3*/
+#define VM_STACKPAGES    12		/*Fixed size stack*/
 typedef enum
 {
 	FIXED, FREE, DIRTY, CLEAN
