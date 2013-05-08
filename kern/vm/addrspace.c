@@ -98,8 +98,38 @@ as_destroy(struct addrspace *as)
 {
 	/*
 	 * Clean up as needed.
+	 * 1. Loop through page_table_list
+	 * 2. if page is allocated free it
+	 * 3. else kfree page_table_entry
+	 * 4. Free the page_table_list
 	 */
-	
+	struct page_table_entry *cur_page = as->page_table_list;
+	struct page_table_entry *next_page = NULL;
+	while(cur_page != NULL)
+	{
+		next_page = cur_page->next_page_entry;
+		if(cur_page->allocated)
+		{
+			free_user_pages(cur_page->as_physical, 1);
+		}
+		kfree(cur_page);
+		cur_page = next_page;
+	}//end of while
+
+	/*
+	 * 5. loop through regions
+	 * 6. Free each region
+	 * 7. destroy addrspace
+	 */
+	struct region *cur_reg = as->region_list;
+	struct region *next_reg = NULL;
+	while(cur_reg != NULL)
+	{
+		next_reg = cur_reg->next_region;
+		kfree(cur_reg);
+		cur_reg = next_reg;
+	}//end of while
+
 	kfree(as);
 }
 
@@ -375,6 +405,7 @@ void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct pa
 	struct page_table_entry *cur = *pgtbl_head_ref;
 	if(cur == NULL)
 	{
+		new_page->next_page_entry = NULL;
 		*pgtbl_head_ref = new_page;
 	}
 	else
