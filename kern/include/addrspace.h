@@ -60,6 +60,7 @@ struct addrspace {
 #else
         /* Put stuff here for your VM system */
 #endif
+
 };
 
 /*
