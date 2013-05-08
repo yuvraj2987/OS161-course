@@ -110,7 +110,7 @@ paddr_t coreMap_stealmem_user(struct addrspace* as, vaddr_t va)
             coreMap[count].va = va;
             coreMap[count].state = DIRTY;
             coreMap[count].pageCount = 1;
-            bzero((void*)returnAdd, PAGE_SIZE);
+            //bzero((void*)returnAdd, PAGE_SIZE);
             return returnAdd;
         }
     }
@@ -152,7 +152,7 @@ vaddr_t alloc_kpages(int npages)
     {
         return 0;
     }
-    bzero((void*)pa, npages*PAGE_SIZE);
+    //bzero((void*)pa, npages*PAGE_SIZE);
     return PADDR_TO_KVADDR(pa);
 }
 

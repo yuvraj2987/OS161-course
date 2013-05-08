@@ -198,6 +198,7 @@ runprogram(char *progname, char **args)
 	enter_new_process(kargc /*argc*/, (userptr_t)buf_base_addrs /*userspace addr of argv*/,
 				buf_base_addrs-16/*Margin of 16*/, entrypoint);
 	/* enter_new_process does not return. */
+
 	panic("enter_new_process returned\n");
 	return EINVAL;
 }
