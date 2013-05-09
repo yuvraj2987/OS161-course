@@ -261,7 +261,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	as->stacktop = USERSTACK - (VM_STACKPAGES*PAGE_SIZE);
 	vaddr_t stack_page = as->stacktop;
 
-	for(int i = 0; i <= VM_STACKPAGES; i++)
+	for(int i = 0; i < VM_STACKPAGES; i++)
 	{
 		struct page_table_entry *new_page = (struct page_table_entry *)kmalloc(sizeof(struct page_table_entry));
 
