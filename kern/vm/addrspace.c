@@ -57,6 +57,8 @@ as_create(void)
 	as->heap_start = 0;
 	as->heap_end = 0;
 	as->stacktop = 0;
+	as->region_list = NULL;
+	as->page_table_list = NULL;
 	/*No need to allocate page here since we are
 	 * using linked list as a page table*/
 
@@ -75,10 +77,9 @@ int as_copy(struct addrspace *old, struct addrspace **ret)
 	/*
 	 * Write this.
 	 */
-
-	old->heap_start = newas->heap_start;
-	old->heap_end   = newas->heap_end;
-	old->stacktop = newas->stacktop;
+	newas->heap_start = old->heap_start;
+	newas->heap_end   = old->heap_end;
+	newas->stacktop = old->stacktop;
 	newas->region_list = copy_region_list(old->region_list);
 	/*Validate*/
 	KASSERT(newas->heap_start != 0);
