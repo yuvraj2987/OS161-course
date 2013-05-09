@@ -59,6 +59,7 @@ struct page
     int pageCount;
 };
 paddr_t coreMap_stealmem(unsigned long npages);
+int sys_sbrk(intptr_t amount, void *retval);
 
 /* Initialization function */
 void vm_bootstrap(void);

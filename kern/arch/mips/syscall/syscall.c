@@ -204,6 +204,10 @@ syscall(struct trapframe *tf)
 		err = sys__getcwd((const_userptr_t)tf->tf_a0, tf->tf_a1, &retval);
 		break;
 
+	/*ASST3*/
+	case SYS_sbrk:
+		err = sys_sbrk(tf->tf_a0, &retval);
+		break;
 
 	default:
 		kprintf("Unknown syscall %d\n", callno);

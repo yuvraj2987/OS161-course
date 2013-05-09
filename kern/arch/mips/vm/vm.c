@@ -140,17 +140,20 @@ void free_kpages(vaddr_t addr)
 				coreMap[innerCount].state = FREE;
 			}
 		}
+
 	}
 
 	spinlock_release(&stealmem_lock);
 }
 
-void vm_tlbshootdown_all(void)
+void
+vm_tlbshootdown_all(void)
 {
 	panic("dumbvm tried to do tlb shootdown?!\n");
 }
 
-void vm_tlbshootdown(const struct tlbshootdown *ts)
+void
+vm_tlbshootdown(const struct tlbshootdown *ts)
 {
 	(void)ts;
 	panic("dumbvm tried to do tlb shootdown?!\n");
@@ -158,7 +161,13 @@ void vm_tlbshootdown(const struct tlbshootdown *ts)
 
 int vm_fault(int faulttype, vaddr_t faultaddress)
 {
-	(void)faultaddress;
 	(void)faulttype;
+	(void)faultaddress;
+	return 0;
+}
+
+int sys_sbrk(intptr_t amount, void *retval)
+{
+
 	return 0;
 }

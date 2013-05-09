@@ -52,12 +52,16 @@ as_create(void)
 	/*
 	 * Initialize as needed.
 	 */
+	as->heap_start = 0;
+	as->heap_end = 0;
+	as->stacktop = 0;
+	/*No need to allocate page here since we are
+	 * using linked list as a page table*/
 
 	return as;
 }
 
-int
-as_copy(struct addrspace *old, struct addrspace **ret)
+int as_copy(struct addrspace *old, struct addrspace **ret)
 {
 	struct addrspace *newas;
 
@@ -70,8 +74,12 @@ as_copy(struct addrspace *old, struct addrspace **ret)
 	 * Write this.
 	 */
 
-	(void)old;
-	
+	old->heap_start = newas->heap_start;
+	old->heap_end   = newas->heap_end;
+	old->stacktop = newas->stacktop;
+	newas->region_list = copy_region_list(old->region_list);
+	/*Page Table Entry should get added in vm_fault*/
+
 	*ret = newas;
 	return 0;
 }
@@ -159,4 +167,42 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 	
 	return 0;
 }
+
+/*ASST3*/
+struct region* copy_region_list(struct region *list_head)
+{
+	struct region *current = list_head;
+	struct region *new_list_head = NULL;
+	struct region *new_list_tail = NULL;
+	while(current != NULL)
+	{
+		if(new_list_head == NULL)
+		{
+			new_list_head = (struct region *)kmalloc(sizeof(struct region));
+			new_list_tail = new_list_head;
+			//DATA
+			new_list_head->as_region_start = current->as_region_start;
+			new_list_head->region_size = current->region_size;
+			new_list_head->execute = current->execute;
+			new_list_head->read = current->read;
+			new_list_head->write = current->write;
+		}
+		else
+		{
+			new_list_tail->next_region = (struct region *)kmalloc(sizeof(struct region));
+			new_list_tail = new_list_tail->next_region;
+			new_list_tail->next_region = NULL;
+			//Data
+			new_list_tail->as_region_start = current->as_region_start;
+			new_list_tail->region_size = current->region_size;
+			new_list_tail->execute = current->execute;
+			new_list_tail->read = current->read;
+			new_list_tail->write = current->write;
+
+		}
+	}//end of while loop
+
+	return new_list_head;
+}
+
 
