@@ -39,6 +39,7 @@
  * used. The cheesy hack versions in dumbvm.c are used instead.
  */
 
+
 struct addrspace *
 as_create(void)
 {
@@ -96,7 +97,7 @@ as_destroy(struct addrspace *as)
 	/*
 	 * Clean up as needed.
 	 */
-	
+
 	kfree(as);
 }
 
@@ -228,7 +229,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 	/* Initial user-level stack pointer */
 	*stackptr = USERSTACK;
-	
+
 	return 0;
 }
 
@@ -289,11 +290,12 @@ void append_region(struct region **reg_head_ref, struct region *new_region)
 	}
 }
 
-void append_page_table_entry(struct page_table **pgtbl_head_ref, struct page_table *new_page)
+void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct page_table_entry *new_page)
 {
-	struct page_table *cur = *pgtbl_head_ref;
+	struct page_table_entry *cur = *pgtbl_head_ref;
 	if(cur == NULL)
 	{
+		new_page->next_page_entry = NULL;
 		*pgtbl_head_ref = new_page;
 	}
 	else
@@ -307,3 +309,4 @@ void append_page_table_entry(struct page_table **pgtbl_head_ref, struct page_tab
 		new_page->next_page_entry = NULL;
 	}
 }
+
