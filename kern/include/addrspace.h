@@ -62,6 +62,7 @@ struct page_table
 	paddr_t	as_physical;
 	//Permission
 	bool read, write,execute;
+	bool allocated;
 	struct page_table *next_page_entry;
 };
 
@@ -82,6 +83,7 @@ struct addrspace {
         vaddr_t heap_end;
         struct node *region_list;
         struct node *page_table_list;
+
 #endif
 
 };
@@ -149,5 +151,14 @@ int load_elf(struct vnode *v, vaddr_t *entrypoint);
 
 
 struct region* copy_region_list(struct region *list_head);
-
+/*appends new_region at the end of the list
+ * 1st param - pointer to list head
+ * 2nd param - new region node pointer*/
+void append_region(struct region **reg_head_ref, struct region *new_region);
+/*
+ * Append newly created page to the page table list
+ * 1st param - pointer to the page tbale list head
+ * 2nd param - page table entry to be appended
+ * */
+void append_page_table_entry(struct page_table **pgtbl_head_ref, struct page_table *new_page);
 #endif /* _ADDRSPACE_H_ */
