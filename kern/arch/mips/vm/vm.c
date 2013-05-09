@@ -23,18 +23,21 @@ unsigned long totalNumberOfPages, kernelPages;
 paddr_t firstaddr, lastaddr, freeaddr;
 struct page* coreMap;
 
-unsigned long count;
+
 
 void vm_bootstrap(void)
 {
 	ram_getsize(&firstaddr, &lastaddr);
 	totalNumberOfPages = lastaddr/PAGE_SIZE;
+	unsigned long count;
 
 	coreMap = (struct page*)PADDR_TO_KVADDR(firstaddr);
 	freeaddr = firstaddr + totalNumberOfPages * sizeof(struct page);
 	kernelPages = (freeaddr + PAGE_SIZE - 1)/PAGE_SIZE;
 
+	/*
 	struct page* tempCoreMap = coreMap;
+
 
 	for(count=0; count<kernelPages; count++)
 	{
@@ -45,7 +48,17 @@ void vm_bootstrap(void)
 		tempCoreMap->pageCount = 1;
 		tempCoreMap = tempCoreMap + sizeof(struct page);
 	}
+	*/
+	for(count = 0; count<kernelPages; count++)
+	{
+		coreMap[count].as = NULL;
+		coreMap[count].state = FIXED;
+		coreMap[count].va = PADDR_TO_KVADDR(count*PAGE_SIZE);
+		coreMap[count].pa = count*PAGE_SIZE;
+		coreMap[count].pageCount = 1;
+	}
 
+	/*
 	for(count=kernelPages; count<totalNumberOfPages; count++)
 	{
 		tempCoreMap->as = NULL;
@@ -55,9 +68,19 @@ void vm_bootstrap(void)
 		tempCoreMap->pageCount = 1;
 		tempCoreMap = tempCoreMap + sizeof(struct page);
 	}
+	*/
+	for(count = kernelPages; count<totalNumberOfPages; count++)
+	{
+		coreMap[count].as = NULL;
+		coreMap[count].state = FREE;
+		coreMap[count].va = 0;
+		coreMap[count].pa = count*PAGE_SIZE;
+		coreMap[count].pageCount = 1;
+	}
 
 	isVMStarted = 1;
 }
+
 
 paddr_t coreMap_stealmem(unsigned long npages)
 {
@@ -183,6 +206,7 @@ void free_kpages(vaddr_t addr)
 void free_user_pages(paddr_t addr, int npages)
 {
 	(void)npages;
+	unsigned long count;
 	for(count=0; count<totalNumberOfPages; count++)
 	{
 		if(coreMap[count].pa==addr)

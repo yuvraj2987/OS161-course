@@ -400,6 +400,8 @@ void copy_page_table(struct addrspace *old, struct addrspace *new)
 		cur = cur->next_page_entry;
 	}//end of while
 
+	new->page_table_list = new_pte_head;
+
 }
 
 
