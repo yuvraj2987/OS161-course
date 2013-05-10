@@ -54,7 +54,9 @@ void vm_bootstrap(void)
 		coreMap[count].as = NULL;
 		coreMap[count].state = FIXED;
 		coreMap[count].va = PADDR_TO_KVADDR(count*PAGE_SIZE);
-		coreMap[count].pa = count*PAGE_SIZE;
+		paddr_t paddr = count*PAGE_SIZE;
+		KASSERT((paddr&PAGE_FRAME)==paddr);
+		coreMap[count].pa = paddr;
 		coreMap[count].pageCount = 1;
 	}
 
@@ -74,7 +76,9 @@ void vm_bootstrap(void)
 		coreMap[count].as = NULL;
 		coreMap[count].state = FREE;
 		coreMap[count].va = 0;
-		coreMap[count].pa = count*PAGE_SIZE;
+		paddr_t paddr = count*PAGE_SIZE;
+		KASSERT((paddr&PAGE_FRAME)==paddr);
+		coreMap[count].pa = paddr;
 		coreMap[count].pageCount = 1;
 	}
 
@@ -105,6 +109,7 @@ paddr_t coreMap_stealmem(unsigned long npages)
 			if(foundContinuousPages==1)
 			{
 				paddr_t returnAdd = coreMap[count].pa;
+				KASSERT((returnAdd&PAGE_FRAME)==returnAdd);
 				for(innerCount=count; innerCount<(count+npages); innerCount++)
 				{
 					coreMap[innerCount].as = NULL;
@@ -129,6 +134,7 @@ paddr_t coreMap_stealmem_user(struct addrspace* as, vaddr_t va)
 		if(coreMap[count].state==FREE)
 		{
 			paddr_t returnAdd = coreMap[count].pa;
+			KASSERT((returnAdd&PAGE_FRAME)==returnAdd);
 			coreMap[count].as = as;
 			coreMap[count].va = va;
 			coreMap[count].state = DIRTY;
@@ -236,7 +242,7 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
 int
 vm_fault(int faulttype, vaddr_t faultaddress)
 {
-	paddr_t paddr;
+	paddr_t paddr = 0;
 	int i;
 	uint32_t ehi, elo;
 	struct addrspace *as;
@@ -316,6 +322,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		return EFAULT;
 
 	/* make sure it's page-aligned */
+//	if((paddr & PAGE_FRAME) != paddr)
+//	{
+//
+//	}
+
+
 	KASSERT((paddr & PAGE_FRAME) == paddr);
 
 

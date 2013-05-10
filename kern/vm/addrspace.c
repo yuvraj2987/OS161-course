@@ -259,7 +259,7 @@ as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 
 	/*Allocate stack PTE beforehand*/
 	as->stacktop = USERSTACK - (VM_STACKPAGES*PAGE_SIZE);
-	vaddr_t stack_page = as->stacktop;
+	vaddr_t stack_page = as->stacktop & PAGE_FRAME;
 
 	for(int i = 0; i < VM_STACKPAGES; i++)
 	{
