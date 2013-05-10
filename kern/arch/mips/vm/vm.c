@@ -48,7 +48,7 @@ void vm_bootstrap(void)
 		tempCoreMap->pageCount = 1;
 		tempCoreMap = tempCoreMap + sizeof(struct page);
 	}
-	*/
+	 */
 	for(count = 0; count<kernelPages; count++)
 	{
 		coreMap[count].as = NULL;
@@ -68,7 +68,7 @@ void vm_bootstrap(void)
 		tempCoreMap->pageCount = 1;
 		tempCoreMap = tempCoreMap + sizeof(struct page);
 	}
-	*/
+	 */
 	for(count = kernelPages; count<totalNumberOfPages; count++)
 	{
 		coreMap[count].as = NULL;
@@ -242,6 +242,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	struct addrspace *as;
 	int spl;
 
+
+
 	faultaddress &= PAGE_FRAME;
 
 	DEBUG(DB_VM, "vm: fault: 0x%x\n", faultaddress);
@@ -275,7 +277,10 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	struct page_table_entry *cur_pte = as->page_table_list;
 	while(cur_pte != NULL)
 	{
-		if(cur_pte->as_virtual<= faultaddress && cur_pte->as_virtual+PAGE_SIZE > faultaddress)
+		KASSERT((cur_pte->as_virtual & PAGE_FRAME) == cur_pte->as_virtual);
+
+		//if(cur_pte->as_virtual<= faultaddress && cur_pte->as_virtual+PAGE_SIZE > faultaddress)
+		if(cur_pte->as_virtual == faultaddress)
 		{
 			//Page found
 			if(!cur_pte->allocated)
@@ -288,15 +293,23 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 					return ENOMEM;
 
 				cur_pte->allocated = 1;
+				/*Get page physical address*/
+				paddr = cur_pte->as_physical;
+				break;
 			}
-			/*Get page physical address*/
-			paddr = cur_pte->as_physical;
-			break;
+			else
+			{
+				/*Get page physical address*/
+				paddr = cur_pte->as_physical;
+				break;
+			}
+
 		}//end of faultaddress if
 
 		cur_pte = cur_pte->next_page_entry;
 	}
 
+	/*If valid page not found then address is invalid*/
 
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);

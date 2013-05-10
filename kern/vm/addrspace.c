@@ -295,6 +295,7 @@ struct region* copy_region_list(struct region *list_head)
 			new_list_tail = new_list_head;
 			//DATA
 			new_list_head->as_region_start = current->as_region_start;
+
 			new_list_head->region_size = current->region_size;
 			new_list_head->execute = current->execute;
 			new_list_head->read = current->read;
@@ -337,11 +338,20 @@ void copy_page_table(struct addrspace *old, struct addrspace *new)
 
 			new_pte_tail = new_pte_head;
 			//Data
+			/*
 			cur->as_virtual = new_pte_head->as_virtual;
+			KASSERT(cur->as_virtual & PAGE_FRAME == cur->as_virtual);
 			cur->execute = new_pte_head->execute;
 			cur->read = new_pte_head->read;
 			cur->write = new_pte_head->write;
 			cur->allocated = new_pte_head->allocated;
+			 */
+			new_pte_head->as_virtual = cur->as_virtual;
+
+			new_pte_head->execute = cur->execute;
+			new_pte_head->read = cur->read;
+			new_pte_head->write = cur->write;
+			new_pte_head->allocated = cur->allocated;
 			if(cur->allocated)
 			{
 				/*
@@ -357,9 +367,9 @@ void copy_page_table(struct addrspace *old, struct addrspace *new)
 				memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
 						(const void *)PADDR_TO_KVADDR(old->as_pbase1),
 						old->as_npages1*PAGE_SIZE);
-						*/
-				memmove((void *)PADDR_TO_KVADDR(cur->as_physical),
-						(const void *)PADDR_TO_KVADDR(new_pte_head->as_physical),PAGE_SIZE);
+				 */
+				memmove((void *)PADDR_TO_KVADDR(new_pte_head->as_physical),
+						(const void *)PADDR_TO_KVADDR(cur->as_physical),PAGE_SIZE);
 			}
 
 		}
@@ -369,11 +379,21 @@ void copy_page_table(struct addrspace *old, struct addrspace *new)
 			new_pte_tail = new_pte_tail->next_page_entry;
 			new_pte_tail->next_page_entry = NULL;
 			//Data
+			/*
 			cur->as_virtual = new_pte_tail->as_virtual;
+			KASSERT(cur->as_virtual & PAGE_FRAME == cur->as_virtual);
 			cur->execute = new_pte_tail->execute;
 			cur->read = new_pte_tail->read;
 			cur->write = new_pte_tail->write;
 			cur->allocated = new_pte_tail->allocated;
+			 */
+			new_pte_tail->as_virtual = cur->as_virtual;
+
+			new_pte_tail->execute = cur->execute;
+			new_pte_tail->read = cur->read;
+			new_pte_tail->write = cur->write;
+			new_pte_tail->allocated = cur->allocated;
+
 			if(cur->allocated)
 			{
 				/*
@@ -390,8 +410,8 @@ void copy_page_table(struct addrspace *old, struct addrspace *new)
 									(const void *)PADDR_TO_KVADDR(old->as_pbase1),
 									old->as_npages1*PAGE_SIZE);
 				 */
-				memmove((void *)PADDR_TO_KVADDR(cur->as_physical),
-						(const void *)PADDR_TO_KVADDR(new_pte_tail->as_physical),PAGE_SIZE);
+				memmove((void *)PADDR_TO_KVADDR(new_pte_tail->as_physical),
+						(const void *)PADDR_TO_KVADDR(cur->as_physical),PAGE_SIZE);
 			}
 
 
@@ -440,8 +460,9 @@ void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct pa
 			cur = cur->next_page_entry;
 		}
 
-		cur->next_page_entry = new_page;
 		new_page->next_page_entry = NULL;
+		cur->next_page_entry = new_page;
+
 	}
 }
 
