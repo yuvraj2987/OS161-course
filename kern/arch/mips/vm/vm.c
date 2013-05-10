@@ -241,6 +241,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
+	bool page_found = 0;
 
 
 
@@ -283,6 +284,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		if(cur_pte->as_virtual == faultaddress)
 		{
 			//Page found
+			page_found = 1;
 			if(!cur_pte->allocated)
 			{
 				//allocate phy page
@@ -310,9 +312,12 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 
 	/*If valid page not found then address is invalid*/
+	if(!page_found)
+		return EFAULT;
 
 	/* make sure it's page-aligned */
 	KASSERT((paddr & PAGE_FRAME) == paddr);
+
 
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
