@@ -193,6 +193,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	new_region->execute = executable;
 	new_region->read = readable;
 	new_region->write = writeable;
+
 	append_region(&as->region_list, new_region);
 	cur_page_addr = vaddr;
 	for(unsigned int i = 0; i<npages; i++)
@@ -208,6 +209,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 		new_pte->execute = executable;
 		new_pte->read = readable;
 		new_pte->write = writeable;
+		new_pte->next_page_entry = NULL;
 		append_page_table_entry(&as->page_table_list, new_pte);
 		cur_page_addr += PAGE_SIZE;
 		cur_page_addr &= PAGE_FRAME;
@@ -431,6 +433,7 @@ void append_region(struct region **reg_head_ref, struct region *new_region)
 	struct region *cur = *reg_head_ref;
 	if(cur == NULL)
 	{
+		new_region->next_region = NULL;
 		*reg_head_ref = new_region;
 	}
 	else
@@ -440,8 +443,9 @@ void append_region(struct region **reg_head_ref, struct region *new_region)
 			cur = cur->next_region;
 		}
 
-		cur->next_region = new_region;
 		new_region->next_region = NULL;
+		cur->next_region = new_region;
+
 	}
 }
 
