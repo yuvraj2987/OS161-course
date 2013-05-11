@@ -363,7 +363,7 @@ int sys_sbrk(int amount, int *retval)
 	struct addrspace *as;
 	as = curthread->t_addrspace;
 	vaddr_t heap_end = as->heap_end;
-
+	vaddr_t new_heap_end;
 	KASSERT(as->heap_start != 0);
 	KASSERT(as->heap_end != 0);
 	KASSERT((as->heap_start & PAGE_FRAME) == as->heap_start);
@@ -379,7 +379,7 @@ int sys_sbrk(int amount, int *retval)
 	else if(amount < 0)
 	{
 		//Reduce heap sz
-		vaddr_t new_heap_end = heap_end + amount;
+		new_heap_end = heap_end + amount;
 
 		if(new_heap_end < as->heap_start)
 		{
@@ -394,60 +394,67 @@ int sys_sbrk(int amount, int *retval)
 		}
 
 		new_heap_end &= PAGE_FRAME;
-		//Free Pages - Check
-		int npages = (heap_end-new_heap_end)/PAGE_SIZE;
-
-		struct page_table_entry* page_list = as->page_table_list;
-		KASSERT(page_list != NULL);
-
-		while(1)
+		//Free physical pages and remove PTE entry
+		struct page_table_entry *cur = as->page_table_list;
+		KASSERT(cur != NULL);
+		//Loop through page table entries
+		while(cur != NULL)
 		{
-			if(page_list->as_virtual==new_heap_end)
-				break;
-
-			page_list = page_list->next_page_entry;
-			if(page_list==NULL)
-				break;
+			//Remove PTE's inbetween new_heap_end and (old) heap end
+			if(cur->as_virtual >= new_heap_end && cur->as_virtual < heap_end)
+			{
+				/*
+				 * 1. Deallocate the page if already allocated
+				 * 2. Remove PTE
+				 * */
+				if(cur->allocated)
+				{
+					free_user_pages(cur->as_physical, 1);
+				}
+			}
+			cur = cur->next_page_entry;
 		}
 
-		paddr_t paddr = page_list->as_physical;
-		for(int count=0; count<npages; count++)
-		{
-			free_user_pages(paddr, 1);
-			paddr = paddr + PAGE_SIZE;
-		}
-		*retval = heap_end;
-		return 0;
+
 	}
 	else
 	{
-		//KASSERT((as->heap_start+amount) < as->stacktop);
+
 		if((as->heap_start+amount) >= as->stacktop)
 		{
 			*retval = -1;
 			return ENOMEM;
 		}
 
-		int npages = (amount +PAGE_SIZE - 1)/PAGE_SIZE;
+		new_heap_end = heap_end + amount;
 
+		if((new_heap_end & PAGE_FRAME) != new_heap_end)
+		{
+			kprintf("OS161 supports heap changes with only page aligned amount\n");
+			return EUNIMP;
+		}
+
+		int npages = (amount +PAGE_SIZE - 1)/PAGE_SIZE;
+		vaddr_t page_vaddr = heap_end;
 		for(int count=0; count<npages; count++)
 		{
-			struct page_table_entry *new_page = (struct page_table_entry *)kmalloc(sizeof(struct page_table_entry));
+			struct page_table_entry *new_page = (struct page_table_entry*) kmalloc(sizeof(struct page_table_entry));
 			new_page->allocated = 0;
-			new_page->as_physical = 0;//get_user_pages(1, as, heap_end);
-			new_page->as_virtual = heap_end;
+			new_page->as_physical = 0;
+			new_page->as_virtual = page_vaddr;
 			new_page->execute = 0;
 			new_page->next_page_entry = NULL;
 			new_page->read = 1;
 			new_page->write = 1;
-
 			append_page_table_entry(&as->page_table_list, new_page);
-			as->heap_start = as->heap_start + PAGE_SIZE;
+			page_vaddr += PAGE_SIZE;
+			KASSERT((page_vaddr & PAGE_FRAME) == page_vaddr);
 		}
 
-		*retval = heap_end;
-		return 0;
-	}
+	}//end of else amount > 0
 
+	//return success
+	as->heap_end = new_heap_end;
+	*retval = heap_end;
 	return 0;
 }
