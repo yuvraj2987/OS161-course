@@ -65,7 +65,7 @@ paddr_t coreMap_stealmem_user(struct addrspace* as, vaddr_t va);
 paddr_t get_user_pages(unsigned long npages, struct addrspace* as, vaddr_t va);
 void free_user_pages(paddr_t addr, int npages);
 int sys_sbrk(int amount, int *retval);
-
+struct page_table_entry* remove_page_table_entry(struct page_table_entry *head, vaddr_t virtual_page_num);
 /* Initialization function */
 void vm_bootstrap(void);
 

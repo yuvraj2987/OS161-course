@@ -411,6 +411,8 @@ int sys_sbrk(int amount, int *retval)
 				{
 					free_user_pages(cur->as_physical, 1);
 				}
+
+				as->page_table_list = remove_page_table_entry(as->page_table_list, cur->as_virtual);
 			}
 			cur = cur->next_page_entry;
 		}
@@ -457,4 +459,30 @@ int sys_sbrk(int amount, int *retval)
 	as->heap_end = new_heap_end;
 	*retval = heap_end;
 	return 0;
+}
+
+
+struct page_table_entry* remove_page_table_entry(struct page_table_entry *head, vaddr_t virtual_page_num)
+{
+	struct page_table_entry *cur = head;
+
+	if(cur->as_virtual == virtual_page_num)
+	{
+		cur = cur->next_page_entry;
+		kfree(head);
+		return cur;
+	}
+
+	//loop til prev of delete node
+	while(((cur->next_page_entry->as_virtual) != virtual_page_num)|| (cur->next_page_entry != NULL) )
+		cur = cur->next_page_entry;
+
+	/*Valid page not found*/
+	KASSERT(cur->next_page_entry != NULL);
+	/*skip del node from the list*/
+	struct page_table_entry *del_pte = cur->next_page_entry;
+	cur->next_page_entry = del_pte->next_page_entry;
+
+	kfree(del_pte);
+	return head;
 }
