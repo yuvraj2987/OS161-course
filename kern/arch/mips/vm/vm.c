@@ -15,6 +15,8 @@
 #include <mips/tlb.h>
 #include <vm.h>
 #include <addrspace.h>
+#include <kern/fcntl.h>
+#include <vfs.h>
 
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
 
@@ -23,7 +25,54 @@ unsigned long totalNumberOfPages, kernelPages;
 paddr_t firstaddr, lastaddr, freeaddr;
 struct page* coreMap;
 
+unsigned long pointer = 0;
+off_t swapOffset = 0;
+struct vnode* swapfile = NULL;
 
+static off_t getNewOffset(void)
+{
+	off_t old = swapOffset;
+	swapOffset = swapOffset + PAGE_SIZE;
+	return old;
+}
+
+static unsigned long getPointer(void)
+{
+	if(pointer==0 || pointer<kernelPages)
+	{
+		panic("pointer==0 || pointer<kernelPages");
+	}
+
+	unsigned long temp;
+	if(pointer>=kernelPages && pointer<totalNumberOfPages)
+	{
+		temp = pointer;
+		pointer++;
+		return temp;
+	}
+	else
+	{
+		pointer = kernelPages;
+		return pointer;
+	}
+
+}
+
+void swapFile_bootstrap(void)
+{
+	getPointer();
+	getNewOffset();
+
+	const char * sf = "lhd0raw:";
+	char* kname = kstrdup(sf);
+
+	int err = vfs_open(kname, O_RDWR, 0, &swapfile);
+	if(err==0)
+		return;
+	else
+		panic("err!=0 in swapFile_bootstrap");
+
+}
 
 void vm_bootstrap(void)
 {
@@ -34,7 +83,7 @@ void vm_bootstrap(void)
 	coreMap = (struct page*)PADDR_TO_KVADDR(firstaddr);
 	freeaddr = firstaddr + totalNumberOfPages * sizeof(struct page);
 	kernelPages = (freeaddr + PAGE_SIZE - 1)/PAGE_SIZE;
-
+	pointer = kernelPages;
 	/*
 	struct page* tempCoreMap = coreMap;
 

@@ -67,6 +67,7 @@ void free_user_pages(paddr_t addr, int npages);
 int sys_sbrk(int amount, int *retval);
 
 /* Initialization function */
+void swapFile_bootstrap(void);
 void vm_bootstrap(void);
 
 /* Fault handling function called by trap code */
