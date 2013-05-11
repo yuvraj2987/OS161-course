@@ -321,13 +321,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	if(!page_found)
 		return EFAULT;
 
-	/* make sure it's page-aligned */
-//	if((paddr & PAGE_FRAME) != paddr)
-//	{
-//
-//	}
-
-
 	KASSERT((paddr & PAGE_FRAME) == paddr);
 
 
