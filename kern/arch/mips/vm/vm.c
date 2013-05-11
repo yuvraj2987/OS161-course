@@ -355,6 +355,8 @@ not available, or the process has reached the limit of the memory it
 is allowed to allocate.
  * EINVAL        The request would move the "break" below its initial value.
  */
+
+//System call
 int sys_sbrk(int amount, int *retval)
 {
 	*retval = -1;
@@ -362,28 +364,41 @@ int sys_sbrk(int amount, int *retval)
 	as = curthread->t_addrspace;
 	vaddr_t heap_end = as->heap_end;
 
-	KASSERT((heap_end&PAGE_FRAME)==heap_end);
+	KASSERT(as->heap_start != 0);
+	KASSERT(as->heap_end != 0);
+	KASSERT((as->heap_start & PAGE_FRAME) == as->heap_start);
+	KASSERT((heap_end & PAGE_FRAME) == heap_end);
 
-	if(amount==0)
+	//Increment heap size by 0
+	if(amount == 0)
 	{
 		*retval = amount;
 		return 0;
 	}
-	else if(amount<0)
+	//Reduce heap size
+	else if(amount < 0)
 	{
+		//Reduce heap sz
 		vaddr_t new_heap_end = heap_end + amount;
-		if(new_heap_end<as->heap_start)
+
+		if(new_heap_end < as->heap_start)
 		{
 			*retval = -1;
 			return EINVAL;
 		}
 
-		//TODO::Code to deallocate pages
+		if((new_heap_end & PAGE_FRAME) != new_heap_end)
+		{
+			kprintf("OS161 supports heap changes with only page aligned amount\n");
+			return EUNIMP;
+		}
+
 		new_heap_end &= PAGE_FRAME;
+		//Free Pages - Check
 		int npages = (heap_end-new_heap_end)/PAGE_SIZE;
 
 		struct page_table_entry* page_list = as->page_table_list;
-		KASSERT(page_list!=NULL);
+		KASSERT(page_list != NULL);
 
 		while(1)
 		{
