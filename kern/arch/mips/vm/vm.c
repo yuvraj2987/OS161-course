@@ -239,11 +239,10 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
 	panic("dumbvm tried to do tlb shootdown?!\n");
 }
 
-int
-vm_fault(int faulttype, vaddr_t faultaddress)
+int vm_fault(int faulttype, vaddr_t faultaddress)
 {
 	paddr_t paddr = 0;
-	int i;
+	//int i;
 	uint32_t ehi, elo;
 	struct addrspace *as;
 	int spl;
@@ -260,6 +259,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	case VM_FAULT_READONLY:
 		/* We always create pages read-write, so we can't get this */
 		panic("dumbvm: got VM_FAULT_READONLY\n");
+		break;
 	case VM_FAULT_READ:
 	case VM_FAULT_WRITE:
 		break;
@@ -334,7 +334,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
 
-	for (i=0; i<NUM_TLB; i++) {
+	/*for (i=0; i<NUM_TLB; i++) {
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
 			continue;
@@ -345,7 +345,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
 		tlb_write(ehi, elo, i);
 		splx(spl);
 		return 0;
-	}
+	}*/
 
 	ehi = faultaddress;
 	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
@@ -420,12 +420,11 @@ int sys_sbrk(int amount, int *retval)
 			return ENOMEM;
 		}
 
-		int npages = amount/PAGE_SIZE + 1;
+		int npages = (amount +PAGE_SIZE - 1)/PAGE_SIZE;
 
 		for(int count=0; count<npages; count++)
 		{
-			struct page_table_entry *new_page = (struct
-					page_table_entry *)kmalloc(sizeof(struct page_table_entry));
+			struct page_table_entry *new_page = (struct page_table_entry *)kmalloc(sizeof(struct page_table_entry));
 			new_page->allocated = 0;
 			new_page->as_physical = 0;//get_user_pages(1, as, heap_end);
 			new_page->as_virtual = heap_end;

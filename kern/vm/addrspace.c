@@ -223,25 +223,72 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 	return 0;
 }
 
-int
-as_prepare_load(struct addrspace *as)
+int as_prepare_load(struct addrspace *as)
 {
 	/*
 	 * Write this.
 	 */
+	KASSERT(as!=NULL);
 
-	(void)as;
+	struct page_table_entry *page_table_list = as->page_table_list;
+	KASSERT(page_table_list!=NULL);
+
+	while(1)
+	{
+		page_table_list->read = 1;
+		page_table_list->write = 1;
+
+		page_table_list = page_table_list->next_page_entry;
+		if(page_table_list==NULL)
+			break;
+	}
+
 	return 0;
+
 }
 
-int
-as_complete_load(struct addrspace *as)
+int as_complete_load(struct addrspace *as)
 {
 	/*
 	 * Write this.
 	 */
+	KASSERT(as!=NULL);
 
-	(void)as;
+	struct region *region_list = as->region_list;
+	KASSERT(region_list!=NULL);
+
+	while(1)
+	{
+		vaddr_t as_region_start = region_list->as_region_start;
+		KASSERT((as_region_start&PAGE_FRAME) == as_region_start);
+
+		size_t region_size = region_list->region_size;
+		//size_t npages = (region_size + PAGE_SIZE - 1)/PAGE_SIZE;
+
+		struct page_table_entry *page_table_list = as->page_table_list;
+		KASSERT(page_table_list!=NULL);
+
+		while(1)
+		{
+			vaddr_t page_va = page_table_list->as_virtual;
+
+			if(page_va>=as_region_start && (page_va<(as_region_start+region_size)))
+			{
+				page_table_list->read = region_list->read;
+				page_table_list->write = region_list->write;
+				page_table_list->execute = region_list->execute;
+			}
+
+			page_table_list = page_table_list->next_page_entry;
+			if(page_table_list==NULL)
+				break;
+		}
+
+		region_list = region_list->next_region;
+		if(region_list==NULL)
+			break;
+	}
+
 	return 0;
 }
 
