@@ -379,79 +379,6 @@ is allowed to allocate.
  * EINVAL        The request would move the "break" below its initial value.
  */
 
-/*heap end may not be page_aligned but we allocate page_aligned memory*/
-//int sys_sbrk(int amount, userptr_t *retval)
-//{
-//	*retval = (userptr_t) -1; //on error
-//	struct addrspace *as = curthread->t_addrspace;
-//	KASSERT(as != NULL);
-//	//heap start should be page aligned
-//	KASSERT((as->heap_start & PAGE_FRAME) == as->heap_start);
-//	//heap end may not be page aligned
-//	vaddr_t cur_heap_end = as->heap_end;
-//	//new heap end
-//	vaddr_t new_heap_end = cur_heap_end+amount;
-//	if(amount == 0)
-//	{
-//		//align new_heap_end only here
-//		//		if(new_heap_end % PAGE_SIZE)
-//		//		{
-//		//			new_heap_end += PAGE_SIZE;
-//		//			new_heap_end &= PAGE_FRAME;
-//		//		}
-//
-//
-//	}//end of amount ==0 if
-//	else if(amount < 0)
-//	{
-//
-//
-//		if(new_heap_end < (as->heap_start))
-//			return EINVAL;
-//
-//		/*
-//		 * If heap_end is in between the page then that page
-//		 * should be retained
-//		 * */
-//		//Free physical pages and remove PTE entry
-//		struct page_table_entry *cur = as->page_table_list;
-//		KASSERT(cur != NULL);
-//		//Loop through page table entries
-//		while(cur != NULL)
-//		{
-//			//Remove PTE's inbetween new_heap_end and (old) heap end
-//			if(cur->as_virtual >= new_heap_end && cur->as_virtual < cur_heap_end)
-//			{
-//				/*
-//				 * 1. Deallocate the page if already allocated
-//				 * 2. Remove PTE
-//				 * */
-//				if(cur->allocated)
-//				{
-//					free_user_pages(cur->as_physical, 1);
-//				}
-//
-//				as->page_table_list = remove_page_table_entry(as->page_table_list, cur->as_virtual);
-//			}
-//			cur = cur->next_page_entry;
-//		}
-//
-//	}//end of amount < 0 else if
-//	else//amount > 0
-//	{
-//		//		new_heap_end = cur_heap_end + amount;
-//
-//		if(new_heap_end >= as->stacktop)
-//			return ENOMEM;
-//
-//
-//	}
-//
-//	as->heap_end = new_heap_end;
-//	*retval = (userptr_t)cur_heap_end;
-//	return 0;
-//
-//}//end of sys_sbrk
 int sys_sbrk(int amount, int32_t *retval)
 {
 	*retval = (int32_t)-1;
@@ -479,6 +406,29 @@ int sys_sbrk(int amount, int32_t *retval)
 	if(amount < 0)
 	{
 		//Remove PTE
+		//Free physical pages and remove PTE entry
+		struct page_table_entry *cur = as->page_table_list;
+		KASSERT(cur != NULL);
+		//Loop through page table entries
+		while(cur != NULL)
+		{
+			//Remove PTE's inbetween new_heap_end and (old) heap end
+			if(cur->as_virtual >= new_heap_end && cur->as_virtual < cur_heap_end)
+			{
+				/*
+				 * 1. Deallocate the page if already allocated
+				 * 2. Remove PTE
+				 * */
+				if(cur->allocated)
+				{
+					free_user_pages(cur->as_physical, 1);
+				}
+
+				as->page_table_list = remove_page_table_entry(as->page_table_list, cur->as_virtual);
+			}
+			cur = cur->next_page_entry;
+		}
+
 	}
 
 	as->heap_end = new_heap_end;
