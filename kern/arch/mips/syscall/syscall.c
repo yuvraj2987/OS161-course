@@ -207,7 +207,7 @@ syscall(struct trapframe *tf)
 
 	/*ASST3*/
 	case SYS_sbrk:
-		err = sys_sbrk(tf->tf_a0, &retval);
+		err = sys_sbrk(tf->tf_a0, (int32_t *) &retval);
 		break;
 
 	default:

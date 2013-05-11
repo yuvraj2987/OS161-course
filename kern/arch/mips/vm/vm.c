@@ -324,7 +324,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		page_found = 1;
 		//add entry in page table list
 		struct page_table_entry *new_page = (struct page_table_entry*) kmalloc(sizeof(struct page_table_entry));
-		new_page->as_physical = get_user_pages(1, as,cur_pte->as_virtual);
+		new_page->as_physical = get_user_pages(1, as, faultaddress);
 		if (new_page->as_physical == 0)
 		{
 			kfree(new_page);
@@ -380,78 +380,111 @@ is allowed to allocate.
  */
 
 /*heap end may not be page_aligned but we allocate page_aligned memory*/
-int sys_sbrk(int amount, int *retval)
+//int sys_sbrk(int amount, userptr_t *retval)
+//{
+//	*retval = (userptr_t) -1; //on error
+//	struct addrspace *as = curthread->t_addrspace;
+//	KASSERT(as != NULL);
+//	//heap start should be page aligned
+//	KASSERT((as->heap_start & PAGE_FRAME) == as->heap_start);
+//	//heap end may not be page aligned
+//	vaddr_t cur_heap_end = as->heap_end;
+//	//new heap end
+//	vaddr_t new_heap_end = cur_heap_end+amount;
+//	if(amount == 0)
+//	{
+//		//align new_heap_end only here
+//		//		if(new_heap_end % PAGE_SIZE)
+//		//		{
+//		//			new_heap_end += PAGE_SIZE;
+//		//			new_heap_end &= PAGE_FRAME;
+//		//		}
+//
+//
+//	}//end of amount ==0 if
+//	else if(amount < 0)
+//	{
+//
+//
+//		if(new_heap_end < (as->heap_start))
+//			return EINVAL;
+//
+//		/*
+//		 * If heap_end is in between the page then that page
+//		 * should be retained
+//		 * */
+//		//Free physical pages and remove PTE entry
+//		struct page_table_entry *cur = as->page_table_list;
+//		KASSERT(cur != NULL);
+//		//Loop through page table entries
+//		while(cur != NULL)
+//		{
+//			//Remove PTE's inbetween new_heap_end and (old) heap end
+//			if(cur->as_virtual >= new_heap_end && cur->as_virtual < cur_heap_end)
+//			{
+//				/*
+//				 * 1. Deallocate the page if already allocated
+//				 * 2. Remove PTE
+//				 * */
+//				if(cur->allocated)
+//				{
+//					free_user_pages(cur->as_physical, 1);
+//				}
+//
+//				as->page_table_list = remove_page_table_entry(as->page_table_list, cur->as_virtual);
+//			}
+//			cur = cur->next_page_entry;
+//		}
+//
+//	}//end of amount < 0 else if
+//	else//amount > 0
+//	{
+//		//		new_heap_end = cur_heap_end + amount;
+//
+//		if(new_heap_end >= as->stacktop)
+//			return ENOMEM;
+//
+//
+//	}
+//
+//	as->heap_end = new_heap_end;
+//	*retval = (userptr_t)cur_heap_end;
+//	return 0;
+//
+//}//end of sys_sbrk
+int sys_sbrk(int amount, int32_t *retval)
 {
-	*retval = -1; //on error
+	retval = NULL;
 	struct addrspace *as = curthread->t_addrspace;
 	KASSERT(as != NULL);
-	//heap start should be page aligned
-	KASSERT((as->heap_start & PAGE_FRAME) == as->heap_start);
-	//heap end may not be page aligned
 	vaddr_t cur_heap_end = as->heap_end;
-	//new heap end
-	vaddr_t new_heap_end = cur_heap_end+amount;
-	if(amount == 0)
+	if(amount % 4)
 	{
-		//align new_heap_end only here
-		if(new_heap_end % PAGE_SIZE)
-		{
-			new_heap_end += PAGE_SIZE;
-			new_heap_end &= PAGE_FRAME;
-		}
+		amount += 0x040;
+		amount &= 0xFFFFFFF4;
+	}
 
+	vaddr_t new_heap_end = cur_heap_end + amount;
 
-	}//end of amount ==0 if
-	else if(amount < 0)
+	if(new_heap_end < (as->heap_start))
 	{
+		return EINVAL;
+	}
 
-
-		if(new_heap_end < (as->heap_start))
-			return EINVAL;
-
-		/*
-		 * If heap_end is in between the page then that page
-		 * should be retained
-		 * */
-		//Free physical pages and remove PTE entry
-		struct page_table_entry *cur = as->page_table_list;
-		KASSERT(cur != NULL);
-		//Loop through page table entries
-		while(cur != NULL)
-		{
-			//Remove PTE's inbetween new_heap_end and (old) heap end
-			if(cur->as_virtual >= new_heap_end && cur->as_virtual < cur_heap_end)
-			{
-				/*
-				 * 1. Deallocate the page if already allocated
-				 * 2. Remove PTE
-				 * */
-				if(cur->allocated)
-				{
-					free_user_pages(cur->as_physical, 1);
-				}
-
-				as->page_table_list = remove_page_table_entry(as->page_table_list, cur->as_virtual);
-			}
-			cur = cur->next_page_entry;
-		}
-
-	}//end of amount < 0 else if
-	else//amount > 0
+	if(new_heap_end >= as->stacktop)
 	{
-		new_heap_end = cur_heap_end + amount;
+		return ENOMEM;
+	}
 
-		if(new_heap_end >= as->stacktop)
-			return ENOMEM;
-
-
+	if(amount < 0)
+	{
+		//Remove PTE
 	}
 
 	as->heap_end = new_heap_end;
 	*retval = cur_heap_end;
 	return 0;
-
-}//end of sys_sbrk
+}
 
 
 struct page_table_entry* remove_page_table_entry(struct page_table_entry *head, vaddr_t virtual_page_num)
