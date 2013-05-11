@@ -230,7 +230,7 @@ int as_prepare_load(struct addrspace *as)
 	/*
 	 * Write this.
 	 */
-	KASSERT(as!=NULL);
+	/*KASSERT(as!=NULL);
 
 	struct page_table_entry *page_table_list = as->page_table_list;
 	KASSERT(page_table_list!=NULL);
@@ -245,6 +245,8 @@ int as_prepare_load(struct addrspace *as)
 			break;
 	}
 
+	return 0;*/
+	(void)as;
 	return 0;
 
 }
@@ -254,7 +256,7 @@ int as_complete_load(struct addrspace *as)
 	/*
 	 * Write this.
 	 */
-	KASSERT(as!=NULL);
+	/*KASSERT(as!=NULL);
 
 	struct region *region_list = as->region_list;
 	KASSERT(region_list!=NULL);
@@ -289,8 +291,9 @@ int as_complete_load(struct addrspace *as)
 		region_list = region_list->next_region;
 		if(region_list==NULL)
 			break;
-	}
+	}*/
 
+	(void)as;
 	return 0;
 }
 
