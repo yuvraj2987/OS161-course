@@ -63,6 +63,8 @@ struct page_table_entry
 	//Permission
 	bool read, write,execute;
 	bool allocated;
+	off_t diskOffset;
+	bool isInMemory;
 	struct page_table_entry *next_page_entry;
 };
 

@@ -505,6 +505,8 @@ void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct pa
 	if(cur == NULL)
 	{
 		new_page->next_page_entry = NULL;
+		new_page->isInMemory = 0;
+		new_page->diskOffset = -1;
 		*pgtbl_head_ref = new_page;
 	}
 	else
@@ -515,6 +517,8 @@ void append_page_table_entry(struct page_table_entry **pgtbl_head_ref, struct pa
 		}
 
 		new_page->next_page_entry = NULL;
+		new_page->isInMemory = 0;
+		new_page->diskOffset = -1;
 		cur->next_page_entry = new_page;
 
 	}
