@@ -319,7 +319,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 
 	//check if faultaddrs is in between heap limits
-	if((faultaddress >= as->heap_start) && (faultaddress < as->heap_end))
+	if((page_found != 1) && (faultaddress >= as->heap_start) && (faultaddress < as->heap_end))
 	{
 		page_found = 1;
 		//add entry in page table list
@@ -454,7 +454,7 @@ is allowed to allocate.
 //}//end of sys_sbrk
 int sys_sbrk(int amount, int32_t *retval)
 {
-	retval = NULL;
+	*retval = (int32_t)-1;
 	struct addrspace *as = curthread->t_addrspace;
 	KASSERT(as != NULL);
 	vaddr_t cur_heap_end = as->heap_end;
@@ -482,7 +482,7 @@ int sys_sbrk(int amount, int32_t *retval)
 	}
 
 	as->heap_end = new_heap_end;
-	*retval = cur_heap_end;
+	*retval = (int32_t)cur_heap_end;
 	return 0;
 }
 
