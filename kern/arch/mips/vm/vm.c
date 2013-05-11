@@ -282,6 +282,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	KASSERT(as->page_table_list != NULL);
 
 	struct page_table_entry *cur_pte = as->page_table_list;
+	/*check in page table list*/
 	while(cur_pte != NULL)
 	{
 		KASSERT((cur_pte->as_virtual & PAGE_FRAME) == cur_pte->as_virtual);
@@ -316,6 +317,28 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 
 		cur_pte = cur_pte->next_page_entry;
 	}
+
+	//	//check if faultaddrs is in between heap limits
+	//	if((faultaddress >= as->heap_start) && (faultaddress < as->heap_end))
+	//	{
+	//		page_found = 1;
+	//		//add entry in page table list
+	//		struct page_table_entry *new_page = (struct page_table_entry*) kmalloc(sizeof(struct page_table_entry));
+	//		new_page->as_physical = get_user_pages(1, as,cur_pte->as_virtual);
+	//		if (new_page->as_physical == 0)
+	//		{
+	//			kfree(new_page);
+	//			return ENOMEM;
+	//		}
+	//		new_page->allocated = 1;
+	//		new_page->as_virtual = faultaddress;
+	//		new_page->execute = 0;
+	//		new_page->next_page_entry = NULL;
+	//		new_page->read = 1;
+	//		new_page->write = 1;
+	//		append_page_table_entry(&as->page_table_list, new_page);
+	//		paddr = new_page->as_physical;
+	//	}//end of heap if
 
 	/*If valid page not found then address is invalid*/
 	if(!page_found)
@@ -356,39 +379,40 @@ is allowed to allocate.
  * EINVAL        The request would move the "break" below its initial value.
  */
 
-//System call
+/*heap end may not be page_aligned but we allocate page_aligned memory*/
 int sys_sbrk(int amount, int *retval)
 {
-	*retval = -1;
-	struct addrspace *as;
-	as = curthread->t_addrspace;
-	vaddr_t heap_end = as->heap_end;
-	vaddr_t new_heap_end;
-	KASSERT(as->heap_start != 0);
-	KASSERT(as->heap_end != 0);
+	*retval = -1; //on error
+	struct addrspace *as = curthread->t_addrspace;
+	KASSERT(as != NULL);
+	//heap start should be page aligned
 	KASSERT((as->heap_start & PAGE_FRAME) == as->heap_start);
-	KASSERT((heap_end & PAGE_FRAME) == heap_end);
-
-	//Reduce heap size
-	if(amount < 0)
+	//heap end may not be page aligned
+	vaddr_t cur_heap_end = as->heap_end;
+	//new heap end
+	vaddr_t new_heap_end = cur_heap_end+amount;
+	if(amount == 0)
 	{
-		//Reduce heap sz amount is negative
-		new_heap_end = heap_end + amount;
-		//If new_end is not page aligned add 1 additional page
+		//align new_heap_end only here
 		if(new_heap_end % PAGE_SIZE)
 		{
-			new_heap_end = (new_heap_end & PAGE_FRAME) + PAGE_SIZE;
+			new_heap_end += PAGE_SIZE;
+			new_heap_end &= PAGE_FRAME;
 		}
 
-		KASSERT((new_heap_end & PAGE_FRAME) == new_heap_end);
 
-		if(new_heap_end < as->heap_start)
-		{
-			*retval = -1;
+	}//end of amount ==0 if
+	else if(amount < 0)
+	{
+
+
+		if(new_heap_end < (as->heap_start))
 			return EINVAL;
-		}
 
-
+		/*
+		 * If heap_end is in between the page then that page
+		 * should be retained
+		 * */
 		//Free physical pages and remove PTE entry
 		struct page_table_entry *cur = as->page_table_list;
 		KASSERT(cur != NULL);
@@ -396,7 +420,7 @@ int sys_sbrk(int amount, int *retval)
 		while(cur != NULL)
 		{
 			//Remove PTE's inbetween new_heap_end and (old) heap end
-			if(cur->as_virtual >= new_heap_end && cur->as_virtual < heap_end)
+			if(cur->as_virtual >= new_heap_end && cur->as_virtual < cur_heap_end)
 			{
 				/*
 				 * 1. Deallocate the page if already allocated
@@ -412,48 +436,21 @@ int sys_sbrk(int amount, int *retval)
 			cur = cur->next_page_entry;
 		}
 
-
-	}//amount < 0 if ends
-	else if (amount > 0)
+	}//end of amount < 0 else if
+	else//amount > 0
 	{
+		new_heap_end = cur_heap_end + amount;
 
-		if((as->heap_start+amount) >= as->stacktop)
-		{
-			*retval = -1;
+		if(new_heap_end >= as->stacktop)
 			return ENOMEM;
-		}
 
-		int npages = (amount +PAGE_SIZE - 1)/PAGE_SIZE;
-		new_heap_end = heap_end + npages * PAGE_SIZE;
-		KASSERT((new_heap_end & PAGE_FRAME) == new_heap_end);
 
-		vaddr_t page_vaddr = heap_end;
-		for(int count=0; count<npages; count++)
-		{
-			struct page_table_entry *new_page = (struct page_table_entry*) kmalloc(sizeof(struct page_table_entry));
-			new_page->allocated = 0;
-			new_page->as_physical = 0;
-			new_page->as_virtual = page_vaddr;
-			new_page->execute = 0;
-			new_page->next_page_entry = NULL;
-			new_page->read = 1;
-			new_page->write = 1;
-			append_page_table_entry(&as->page_table_list, new_page);
-			page_vaddr += PAGE_SIZE;
-			KASSERT((page_vaddr & PAGE_FRAME) == page_vaddr);
-		}
-
-	}//end of else amount > 0
-	else //amount == 0
-	{
-		new_heap_end = heap_end+amount;
-		KASSERT((new_heap_end & PAGE_FRAME) == new_heap_end);
 	}
 
-	//return success
 	as->heap_end = new_heap_end;
-	*retval = heap_end;
+	*retval = cur_heap_end;
 	return 0;
+
 }//end of sys_sbrk
 
 
