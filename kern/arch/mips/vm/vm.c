@@ -318,27 +318,27 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		cur_pte = cur_pte->next_page_entry;
 	}
 
-	//	//check if faultaddrs is in between heap limits
-	//	if((faultaddress >= as->heap_start) && (faultaddress < as->heap_end))
-	//	{
-	//		page_found = 1;
-	//		//add entry in page table list
-	//		struct page_table_entry *new_page = (struct page_table_entry*) kmalloc(sizeof(struct page_table_entry));
-	//		new_page->as_physical = get_user_pages(1, as,cur_pte->as_virtual);
-	//		if (new_page->as_physical == 0)
-	//		{
-	//			kfree(new_page);
-	//			return ENOMEM;
-	//		}
-	//		new_page->allocated = 1;
-	//		new_page->as_virtual = faultaddress;
-	//		new_page->execute = 0;
-	//		new_page->next_page_entry = NULL;
-	//		new_page->read = 1;
-	//		new_page->write = 1;
-	//		append_page_table_entry(&as->page_table_list, new_page);
-	//		paddr = new_page->as_physical;
-	//	}//end of heap if
+	//check if faultaddrs is in between heap limits
+	if((faultaddress >= as->heap_start) && (faultaddress < as->heap_end))
+	{
+		page_found = 1;
+		//add entry in page table list
+		struct page_table_entry *new_page = (struct page_table_entry*) kmalloc(sizeof(struct page_table_entry));
+		new_page->as_physical = get_user_pages(1, as,cur_pte->as_virtual);
+		if (new_page->as_physical == 0)
+		{
+			kfree(new_page);
+			return ENOMEM;
+		}
+		new_page->allocated = 1;
+		new_page->as_virtual = faultaddress;
+		new_page->execute = 0;
+		new_page->next_page_entry = NULL;
+		new_page->read = 1;
+		new_page->write = 1;
+		append_page_table_entry(&as->page_table_list, new_page);
+		paddr = new_page->as_physical;
+	}//end of heap if
 
 	/*If valid page not found then address is invalid*/
 	if(!page_found)
