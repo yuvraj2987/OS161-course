@@ -16,7 +16,10 @@
 #include <vm.h>
 #include <addrspace.h>
 
+#define MAX_HEAP_SIZE 0x40000000
+
 static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
+
 
 bool isVMStarted = 0;
 unsigned long totalNumberOfPages, kernelPages;
@@ -350,7 +353,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
 
-	/*for (i=0; i<NUM_TLB; i++) {
+	for (int i=0; i<NUM_TLB; i++) {
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
 			continue;
@@ -361,7 +364,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		tlb_write(ehi, elo, i);
 		splx(spl);
 		return 0;
-	}*/
+	}
 
 	ehi = faultaddress;
 	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
