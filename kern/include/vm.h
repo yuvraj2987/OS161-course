@@ -68,6 +68,7 @@ void free_user_pages(paddr_t addr, int npages);
 int sys_sbrk(int amount, int32_t *retval);
 struct page_table_entry* remove_page_table_entry(struct page_table_entry *head, vaddr_t virtual_page_num);
 /* Initialization function */
+void swapFile_bootstrap(void);
 void vm_bootstrap(void);
 
 /* Fault handling function called by trap code */

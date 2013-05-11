@@ -15,6 +15,10 @@
 #include <mips/tlb.h>
 #include <vm.h>
 #include <addrspace.h>
+#include <kern/fcntl.h>
+#include <vfs.h>
+#include <vnode.h>
+#include <uio.h>
 
 #define MAX_HEAP_SIZE 0x40000000
 
@@ -26,7 +30,51 @@ unsigned long totalNumberOfPages, kernelPages;
 paddr_t firstaddr, lastaddr, freeaddr;
 struct page* coreMap;
 
+unsigned long pointer = 0;
+off_t swapOffset = 0;
+struct vnode* swapfile = NULL;
 
+static off_t getNewOffset(void)
+{
+	off_t old = swapOffset;
+	swapOffset = swapOffset + PAGE_SIZE;
+	return old;
+}
+
+static unsigned long getPointer(void)
+{
+	if(pointer==0 || pointer<kernelPages)
+	{
+		panic("pointer==0 || pointer<kernelPages");
+	}
+
+	unsigned long temp;
+	if(pointer>=kernelPages && pointer<totalNumberOfPages)
+	{
+		temp = pointer;
+		pointer++;
+		return temp;
+	}
+	else
+	{
+		pointer = kernelPages;
+		return pointer;
+	}
+
+}
+
+void swapFile_bootstrap(void)
+{
+	//char* sf = "lhd0raw:";
+	//char* kname = kstrdup(sf);
+
+	int err = vfs_open((void*)"lhd0raw", O_RDWR, 0, &swapfile);
+	if(err==0)
+		return;
+	else
+		panic("err!=0 in swapFile_bootstrap");
+
+}
 
 void vm_bootstrap(void)
 {
@@ -37,7 +85,7 @@ void vm_bootstrap(void)
 	coreMap = (struct page*)PADDR_TO_KVADDR(firstaddr);
 	freeaddr = firstaddr + totalNumberOfPages * sizeof(struct page);
 	kernelPages = (freeaddr + PAGE_SIZE - 1)/PAGE_SIZE;
-
+	pointer = kernelPages;
 	/*
 	struct page* tempCoreMap = coreMap;
 
@@ -270,8 +318,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		return EINVAL;
 	}
 
+	//spl = splhigh();
 	as = curthread->t_addrspace;
-	if (as == NULL) {
+	if (as == NULL)
+	{
 		/*
 		 * No address space set up. This is probably a kernel
 		 * fault early in boot. Return EFAULT so as to panic
@@ -295,25 +345,143 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		{
 			//Page found
 			page_found = 1;
-			if(!cur_pte->allocated)
+			if(cur_pte->allocated==0 && cur_pte->isInMemory==0)
 			{
-				//allocate phy page
-				cur_pte->as_physical = get_user_pages(1, as,cur_pte->as_virtual);
+				//int spl = splhigh();
+				cur_pte->diskOffset = getNewOffset();
+				//splx(spl);
 
-				/*No Physical page*/
+				cur_pte->as_physical = get_user_pages(1, as,cur_pte->as_virtual);
 				if(cur_pte->as_physical == 0)
-					return ENOMEM;
+				{
+					//swap_out code
+					unsigned long ptr = getPointer();
+
+					struct addrspace *temp_as = coreMap[ptr].as;
+					paddr_t temp_pa = coreMap[ptr].pa;
+					KASSERT((temp_pa&PAGE_FRAME)==temp_pa);
+
+					struct page_table_entry* temp_page_list = temp_as->page_table_list;
+					KASSERT(temp_page_list!=NULL);
+
+					bool pgfnd =0;
+					while(1)
+					{
+						if(temp_page_list->as_physical==temp_pa)
+						{
+							//TODO:Add lock where ever applicable
+							pgfnd =1;
+							struct uio uio_swap_out;
+							struct iovec iovec_swap_out;
+
+							uio_kinit(&iovec_swap_out, &uio_swap_out,
+									(void*)PADDR_TO_KVADDR(temp_pa), PAGE_SIZE,
+									temp_page_list->diskOffset, UIO_WRITE);
+
+							if(swapfile!=NULL)
+							{
+								swapFile_bootstrap();
+							}
+							int err = VOP_WRITE(swapfile, &uio_swap_out);
+							if(err!=0)
+							{
+								panic("panic in VOP_WRITE");
+							}
+
+							temp_page_list->isInMemory = 0;
+
+							coreMap[ptr].as = as;
+							coreMap[ptr].pageCount = 1;
+							coreMap[ptr].state = DIRTY;
+							coreMap[ptr].va = cur_pte->as_virtual;
+
+							cur_pte->as_physical = coreMap[ptr].pa;
+							cur_pte->isInMemory = 1;
+
+							break;
+						}
+						else
+						{
+							temp_page_list = temp_page_list->next_page_entry;
+							if(temp_page_list==NULL)
+								break;
+						}
+					}//while ends
+
+					if(pgfnd==1)
+						panic("pgfnd==0");
+
+				}//if(cur_pte->as_physical == 0) ends
 
 				cur_pte->allocated = 1;
 				/*Get page physical address*/
 				paddr = cur_pte->as_physical;
 				break;
 			}
-			else
+			else if(cur_pte->allocated==1 && cur_pte->isInMemory==1)
 			{
 				/*Get page physical address*/
 				paddr = cur_pte->as_physical;
 				break;
+			}
+			else if(cur_pte->allocated==1 && cur_pte->isInMemory==0)
+			{
+				//swap_in code
+
+				//first swap out to make space
+				unsigned long index = cur_pte->as_physical/PAGE_SIZE;
+				struct addrspace* temp_addr = coreMap[index].as;
+				struct page_table_entry* temp_page_list = temp_addr->page_table_list;
+
+				while(1)
+				{
+					if(temp_page_list->as_physical==coreMap[index].pa)
+					{
+						struct uio uio_swap_out;
+						struct iovec iovec_swap_out;
+
+						uio_kinit(&iovec_swap_out, &uio_swap_out,
+								(void*)PADDR_TO_KVADDR(temp_page_list->as_physical),
+								PAGE_SIZE, temp_page_list->diskOffset, UIO_WRITE);
+
+						KASSERT(swapfile!=NULL);
+						int err = VOP_WRITE(swapfile, &uio_swap_out);
+						if(err!=0)
+						{
+							panic("panic in VOP_WRITE");
+						}
+
+						temp_page_list->isInMemory = 0;
+
+					}
+					else
+					{
+						temp_page_list = temp_page_list->next_page_entry;
+						if(temp_page_list==NULL)
+							break;
+					}
+				}
+
+				//now actual swapping in
+				struct uio uio_swap_read;
+				struct iovec iovec_swap_read;
+				uio_kinit(&iovec_swap_read, &uio_swap_read,
+						(void*)PADDR_TO_KVADDR(cur_pte->as_physical),
+						PAGE_SIZE, cur_pte->diskOffset, UIO_READ);
+				int err = VOP_READ(swapfile, &uio_swap_read);
+				if(err!=0)
+					panic("err!=0 in VOP_READ");
+
+				cur_pte->isInMemory=1;
+
+				coreMap[index].as = as;
+				coreMap[index].state = DIRTY;
+
+				break;
+			}
+			else
+			{
+				panic("unknown condition in vm_fault");
 			}
 
 		}//end of faultaddress if
@@ -353,7 +521,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	/* Disable interrupts on this CPU while frobbing the TLB. */
 	spl = splhigh();
 
-	for (int i=0; i<NUM_TLB; i++) {
+
+
+	//TODO:remove below comments.
+	/*for (i=0; i<NUM_TLB; i++) {
+
 		tlb_read(&ehi, &elo, i);
 		if (elo & TLBLO_VALID) {
 			continue;
@@ -365,7 +537,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		splx(spl);
 		return 0;
 	}
-
+*/
 	ehi = faultaddress;
 	elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
 	DEBUG(DB_VM, "MyVm_random: 0x%x -> 0x%x\n", faultaddress, paddr);
@@ -454,7 +626,6 @@ int sys_sbrk(int amount, int32_t *retval)
 	*retval = (int32_t)cur_heap_end;
 	return 0;
 }
-
 
 struct page_table_entry* remove_page_table_entry(struct page_table_entry *head, vaddr_t virtual_page_num)
 {
