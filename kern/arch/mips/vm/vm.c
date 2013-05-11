@@ -394,6 +394,15 @@ int sys_sbrk(int amount, int32_t *retval)
 		amount &= 0xFFFFFFF4;
 	}
 
+	if(amount < 0 )
+	{
+		unsigned int heap_sz = amount*-1;
+		if(as->heap_start < (as->heap_end - heap_sz))
+		{
+			return EINVAL;
+		}
+	}
+
 	vaddr_t new_heap_end = cur_heap_end + amount;
 
 	if(new_heap_end < (as->heap_start))
@@ -401,10 +410,17 @@ int sys_sbrk(int amount, int32_t *retval)
 		return EINVAL;
 	}
 
-	if(new_heap_end >= as->stacktop)
+	if(new_heap_end > as->stacktop)
 	{
 		return ENOMEM;
 	}
+
+	//To pass badcall test
+	if((new_heap_end - as->heap_start) >= MAX_HEAP_SIZE)
+	{
+		return ENOMEM;
+	}
+
 
 	if(amount < 0)
 	{
