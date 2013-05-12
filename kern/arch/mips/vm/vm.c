@@ -26,7 +26,12 @@ unsigned long totalNumberOfPages, kernelPages;
 paddr_t firstaddr, lastaddr, freeaddr;
 struct page* coreMap;
 
-
+static
+void
+as_zero_region(paddr_t paddr, unsigned npages)
+{
+	bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
+}
 
 void vm_bootstrap(void)
 {
@@ -122,6 +127,7 @@ paddr_t coreMap_stealmem(unsigned long npages)
 					coreMap[innerCount].pageCount = (npages
 							-(innerCount-count));
 				}
+				as_zero_region(returnAdd, totalNumberOfPages);
 				spinlock_release(&stealmem_lock);
 				return returnAdd;
 			}
@@ -147,6 +153,7 @@ paddr_t coreMap_stealmem_user(struct addrspace* as, vaddr_t va)
 			coreMap[count].state = DIRTY;
 			coreMap[count].pageCount = 1;
 			//bzero((void*)returnAdd, PAGE_SIZE);
+			as_zero_region(returnAdd, 1);
 			spinlock_release(&stealmem_lock);
 			return returnAdd;
 		}
