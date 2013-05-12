@@ -94,6 +94,7 @@ paddr_t coreMap_stealmem(unsigned long npages)
 	unsigned long count;
 	unsigned long innerCount;
 	bool foundContinuousPages = 0;
+	spinlock_acquire(&stealmem_lock);
 
 	for(count=0; count<totalNumberOfPages; count++)
 	{
@@ -121,17 +122,20 @@ paddr_t coreMap_stealmem(unsigned long npages)
 					coreMap[innerCount].pageCount = (npages
 							-(innerCount-count));
 				}
+				spinlock_release(&stealmem_lock);
 				return returnAdd;
 			}
 
 		}//outer if ends
 	}//outer for ends
+	spinlock_release(&stealmem_lock);
 	return 0;
 }
 
 paddr_t coreMap_stealmem_user(struct addrspace* as, vaddr_t va)
 {
 	unsigned long count;
+	spinlock_acquire(&stealmem_lock);
 	for(count=0; count<totalNumberOfPages; count++)
 	{
 		if(coreMap[count].state==FREE)
@@ -143,24 +147,26 @@ paddr_t coreMap_stealmem_user(struct addrspace* as, vaddr_t va)
 			coreMap[count].state = DIRTY;
 			coreMap[count].pageCount = 1;
 			//bzero((void*)returnAdd, PAGE_SIZE);
+			spinlock_release(&stealmem_lock);
 			return returnAdd;
 		}
 	}
+	spinlock_release(&stealmem_lock);
 	return 0;
 }
 
 static paddr_t getppages(unsigned long npages)
 {
 	paddr_t addr;
-
-	spinlock_acquire(&stealmem_lock);
+	/*CoreMap locked in coreMap_stealmem*/
+	//spinlock_acquire(&stealmem_lock);
 
 	if(isVMStarted==0)
 		addr = ram_stealmem(npages);
 	else
 		addr = coreMap_stealmem(npages);
 
-	spinlock_release(&stealmem_lock);
+	//spinlock_release(&stealmem_lock);
 
 	return addr;
 }
@@ -168,9 +174,9 @@ static paddr_t getppages(unsigned long npages)
 paddr_t get_user_pages(unsigned long npages, struct addrspace* as, vaddr_t va)
 {
 	(void)npages;
-	spinlock_acquire(&stealmem_lock);
+	//spinlock_acquire(&stealmem_lock);
 	paddr_t addr = coreMap_stealmem_user(as,va);
-	spinlock_release(&stealmem_lock);
+	//spinlock_release(&stealmem_lock);
 
 	return addr;
 }
@@ -216,6 +222,7 @@ void free_user_pages(paddr_t addr, int npages)
 {
 	(void)npages;
 	unsigned long count;
+	spinlock_acquire(&stealmem_lock);
 	for(count=0; count<totalNumberOfPages; count++)
 	{
 		if(coreMap[count].pa==addr)
@@ -224,9 +231,11 @@ void free_user_pages(paddr_t addr, int npages)
 			coreMap[count].va = 0;
 			coreMap[count].pageCount = 1;
 			coreMap[count].state = FREE;
+			spinlock_release(&stealmem_lock);
 			return;
 		}
 	}
+	spinlock_release(&stealmem_lock);
 
 }
 
@@ -250,8 +259,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	struct addrspace *as;
 	int spl;
 	bool page_found = 0;
-
-
 
 	faultaddress &= PAGE_FRAME;
 
